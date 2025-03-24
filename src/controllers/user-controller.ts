@@ -1,3 +1,4 @@
+import { access } from "fs";
 import { UserModel } from "../models";
 import { AuthController } from "./auth-controller";
 import bcrypt from "bcrypt";
@@ -21,12 +22,24 @@ export class UserController {
             return res.status(400).json({ message: 'authentication failed' });
         }
         const userTemp = new UserModel();
+        const auth = new AuthController();
         const data = await userTemp.findUserById(user.id);
-        res.status(200).json(data);
+        if (data.status && data.data) {
+            const access_token = await auth.generateToken(data.data);
+            return res.status(200).json(
+                {
+                    data: {
+                        ...data.data,
+                        access_token: access_token
+                    }, status: true, message: "success"
+                }
+            );
+        }
+        return res.status(400).json(data);
     }
 
     async create(req: any, res: any) {
-        const { username, password, confirm_password, fullname, phone_number, gender, email, avatar, role, status } = req.body;
+        const { username, password, confirm_password, fullname, phone_number, address, dob, gender, email, avatar, role, status } = req.body;
         if (!username || !password || !fullname || !phone_number || !email || !confirm_password) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
@@ -39,6 +52,8 @@ export class UserController {
         user.password = password;
         user.fullname = fullname;
         user.phone_number = phone_number;
+        user.address = address;
+        user.dob = dob;
         user.gender = gender;
         user.email = email;
         user.avatar = avatar;
@@ -69,11 +84,13 @@ export class UserController {
         if (!user) {
             return res.status(400).json({ message: 'authentication failed' });
         }
-        const { fullname, phone_number, gender, email, avatar, role, status } = req.body;
+        const { fullname, phone_number, address, dob, gender, email, avatar, role, status } = req.body;
         const userTemp = new UserModel();
         userTemp.id = user.id;
         userTemp.fullname = fullname;
         userTemp.phone_number = phone_number;
+        userTemp.address = address;
+        userTemp.dob = dob;
         userTemp.gender = gender;
         userTemp.email = email;
         userTemp.avatar = avatar;

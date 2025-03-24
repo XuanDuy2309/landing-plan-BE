@@ -24,7 +24,9 @@ export class UserModel {
     confirm_password?: string;
     fullname?: string;
     phone_number?: string;
+    address?: string;
     gender?: Gender = Gender.MALE;
+    dob?: string;
     email?: string;
     avatar?: string;
     background?: string;
@@ -52,6 +54,8 @@ export class UserModel {
             this.username = rows[0].username
             this.fullname = rows[0].fullname
             this.phone_number = rows[0].phone_number
+            this.address = rows[0].address
+            this.dob = rows[0].dob
             this.gender = rows[0].gender
             this.email = rows[0].email
             this.avatar = rows[0].avatar
@@ -95,6 +99,8 @@ export class UserModel {
             this.username = rows[0].username
             this.fullname = rows[0].fullname
             this.phone_number = rows[0].phone_number
+            this.address = rows[0].address
+            this.dob = rows[0].dob
             this.gender = rows[0].gender
             this.email = rows[0].email
             this.avatar = rows[0].avatar
@@ -118,8 +124,8 @@ export class UserModel {
             this.password = await bcrypt.hash(this.password || '', salt);
 
             const [result]: any = await pool.query(
-                'INSERT INTO users (username, password, fullname, phone_number, gender, email, avatar,background, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [this.username, this.password, this.fullname, this.phone_number, this.gender, this.email, this.avatar, this.background, this.role, this.status, this.created_at]
+                'INSERT INTO users (username, password, fullname, phone_number, address,dob, gender, email, avatar,background) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [this.username, this.password, this.fullname, this.phone_number, this.address, this.dob, this.gender, this.email, this.avatar, this.background, this.role, this.status, this.created_at]
             );
 
             const data = await this.findUserById(result.insertId);
@@ -135,14 +141,16 @@ export class UserModel {
 
     async updateInfo() {
         try {
-            const [rows] = await pool.query('UPDATE users SET fullname = ?, phone_number = ?, gender = ?, email = ?, role = ?, status = ? WHERE id = ?',
-                [this.fullname, this.phone_number, this.gender, this.email, this.role, this.status, this.id]);
+            const [rows] = await pool.query('UPDATE users SET fullname = ?, phone_number = ?, address = ?,dob=?, gender = ?, email = ?, role = ?, status = ? WHERE id = ?',
+                [this.fullname, this.phone_number, this.address, this.dob, this.gender, this.email, this.role, this.status, this.id]);
             return {
                 data: {
                     id: this.id,
                     username: this.username,
                     fullname: this.fullname,
                     phone_number: this.phone_number,
+                    address: this.address,
+                    dob: this.dob,
                     gender: this.gender,
                     email: this.email,
                     avatar: this.avatar,

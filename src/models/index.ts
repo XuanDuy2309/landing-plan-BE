@@ -1,2 +1,2 @@
 export * from './user-model';
-export * from './image-model';
+export * from './uploads-model';
