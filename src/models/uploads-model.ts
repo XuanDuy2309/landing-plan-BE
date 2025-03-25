@@ -45,7 +45,7 @@ export class ImageModel {
     }
 
     async getAllImageByUserID(id?: number) {
-        return await pool.query('SELECT id,image_link,user_id FROM uploads WHERE user_id = ?', [id])
+        return await pool.query('SELECT id,image_link,user_id FROM uploads WHERE user_id = ? AND image_link is not null', [id])
             .then((res: any) => {
                 return { data: [...res[0]], status: true, message: 'success' }
             })
@@ -75,7 +75,7 @@ export class ImageModel {
     }
 
     async getAllVideoByUserID(id?: number) {
-        return await pool.query('SELECT id,video_link,user_id FROM uploads WHERE user_id = ?', [id])
+        return await pool.query('SELECT id,video_link,user_id FROM uploads WHERE user_id = ? AND video_link is not null', [id])
             .then((res: any) => {
                 return { data: [...res[0]], status: true, message: 'success' }
             })
