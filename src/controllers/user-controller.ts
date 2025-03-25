@@ -60,6 +60,7 @@ export class UserController {
         user.role = role;
         user.status = status;
         user.confirm_password = confirm_password;
+        user.created_at = new Date()
         const check = await user.checkInvalidUser();
         if (check.status) {
             return res.status(400).json({ message: check.message });

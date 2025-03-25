@@ -124,8 +124,8 @@ export class UserModel {
             this.password = await bcrypt.hash(this.password || '', salt);
 
             const [result]: any = await pool.query(
-                'INSERT INTO users (username, password, fullname, phone_number, address,dob, gender, email, avatar,background) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [this.username, this.password, this.fullname, this.phone_number, this.address, this.dob, this.gender, this.email, this.avatar, this.background, this.role, this.status, this.created_at]
+                'INSERT INTO users (username, password, fullname, phone_number, gender, email, avatar,background, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [this.username, this.password, this.fullname, this.phone_number, this.gender, this.email, this.avatar, this.background, this.role, this.status, this.created_at]
             );
 
             const data = await this.findUserById(result.insertId);
