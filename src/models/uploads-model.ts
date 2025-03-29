@@ -1,28 +1,18 @@
 import pool from "../config/db";
 
-export class ImageModel {
+export class UploadModel {
     id?: number;
-    image_link?: string;
-    video_link?: string;
+    link?: string;
+    type?: string;
     group_id?: number;
     user_id?: number;
     constructor() { }
 
-    async saveImage(link?: string, user_id?: number) {
-        return await pool.query('INSERT INTO uploads (image_link, user_id) VALUES (?, ?)', [link, user_id])
-            .then(res => {
-                return { data: link, status: true, message: 'success' }
-            })
-            .catch(err => {
-                return { data: null, status: false, message: err }
-            })
-    }
-
-    async saveListImage(links: string[], user_id?: number) {
+    async upload(links: string[], user_id?: number, type?: string) {
         const data = links.map((link: string) => {
-            return [link, user_id]
+            return [link, user_id, type]
         })
-        return await pool.query('INSERT INTO uploads (image_link, user_id) VALUES ?', [data])
+        return await pool.query('INSERT INTO uploads (link, user_id, type) VALUES ?', [data])
             .then(res => {
                 return { data: links, status: true, message: 'success' }
             })
@@ -31,21 +21,8 @@ export class ImageModel {
             })
     }
 
-    async saveListVideo(links: string[], user_id?: number) {
-        const data = links.map((link: string) => {
-            return [link, user_id]
-        })
-        return await pool.query('INSERT INTO uploads (video_link, user_id) VALUES ?', [data])
-            .then(res => {
-                return { data: links, status: true, message: 'success' }
-            })
-            .catch(err => {
-                return { data: null, status: false, message: err }
-            })
-    }
-
-    async getAllImageByUserID(id?: number) {
-        return await pool.query('SELECT id,image_link,user_id FROM uploads WHERE user_id = ? AND image_link is not null', [id])
+    async getListMediaByUserID(id?: number, type?: string) {
+        return await pool.query('SELECT * FROM uploads WHERE user_id = ? AND type = ?', [id, type])
             .then((res: any) => {
                 return { data: [...res[0]], status: true, message: 'success' }
             })
@@ -54,37 +31,7 @@ export class ImageModel {
             })
     }
 
-    async deleteImage(id?: number) {
-        return await pool.query('DELETE FROM uploads WHERE id = ?', [id])
-            .then(res => {
-                return { status: true, message: 'success' }
-            })
-            .catch(err => {
-                return { status: false, message: err }
-            })
-    }
-
-    async saveVideo(link?: string, user_id?: number) {
-        return await pool.query('INSERT INTO uploads (video_link, user_id) VALUES (?, ?)', [link, user_id])
-            .then(res => {
-                return { data: link, status: true, message: 'success' }
-            })
-            .catch(err => {
-                return { data: null, status: false, message: err }
-            })
-    }
-
-    async getAllVideoByUserID(id?: number) {
-        return await pool.query('SELECT id,video_link,user_id FROM uploads WHERE user_id = ? AND video_link is not null', [id])
-            .then((res: any) => {
-                return { data: [...res[0]], status: true, message: 'success' }
-            })
-            .catch(err => {
-                return { data: null, status: false, message: err }
-            })
-    }
-
-    async deleteVideo(id?: number) {
+    async delete(id?: number) {
         return await pool.query('DELETE FROM uploads WHERE id = ?', [id])
             .then(res => {
                 return { status: true, message: 'success' }
