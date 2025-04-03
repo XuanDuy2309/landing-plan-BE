@@ -15,7 +15,6 @@ export const getTile = (req: Request, res: Response) => {
 
 
     const tilePath = path.join(__dirname, "../../", TILE_DIR, z, x, `${adjustedY}.png`);
-    console.log(tilePath)
     res.sendFile(tilePath, (err) => {
         if (err) {
             res.status(404).send("Tile not found");

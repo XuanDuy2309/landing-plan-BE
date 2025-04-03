@@ -40,7 +40,6 @@ export class AuthController {
     async getListMedia(req: any, res: any) {
         const { user } = req
         const { type } = req.query
-        console.log(req)
         const image = new UploadModel();
         const data = await image.getListMediaByUserID(user.id, type);
         res.status(200).json(data);
