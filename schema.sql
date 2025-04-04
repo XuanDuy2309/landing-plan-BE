@@ -130,6 +130,82 @@ ALTER TABLE `uploads`
   ADD CONSTRAINT `uploads_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
+CREATE TABLE `coordinates_location` (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    points POLYGON NOT NULL,
+    province_id VARCHAR(10) NOT NULL,
+    district_id VARCHAR(10) NOT NULL,
+    ward_id VARCHAR(10) NOT NULL,
+    area DECIMAL(10,2) NOT NULL,
+    owner_name VARCHAR(255) NOT NULL,
+    content TEXT
+);
+
+INSERT INTO coordinates_location (points, province_id, district_id, ward_id, area, owner_name, content) 
+VALUES (
+    ST_GeomFromText('POLYGON((105.74031681785695 20.74992235892653, 
+                               105.74024050159778 20.74982874776511, 
+                               105.73981310391954 20.750009434613116, 
+                               105.73984709903188 20.750088775838684, 
+                               105.73992283078836 20.750062255127023, 
+                               105.7401586680722 20.749982655586003, 
+                               105.74029670993214 20.749934187997482, 
+                               105.74031681785695 20.74992235892653))'),
+    '1', 
+    '1', 
+    '1', 
+    570.57, 
+    'Nguyễn Thị Hiểm', 
+    'Thửa 21, tổ 6. Diện tích: 570.567m²'
+);
+
+INSERT INTO coordinates_location (points, province_id, district_id, ward_id, area, owner_name, content)
+VALUES (
+    ST_GeomFromText('POLYGON((106.15985374788846 20.909961733135894, 
+                              106.15977505134708 20.90994731391689, 
+                              106.1597189371027 20.9099530405286, 
+                              106.1597127134876 20.910068591803952, 
+                              106.15972339799848 20.910115791157082, 
+                              106.15973468638944 20.91012523181588, 
+                              106.15981511737537 20.910118598342354, 
+                              106.15990862088954 20.910111733680676, 
+                              106.15998694733162 20.910107456738, 
+                              106.16016061711927 20.91009937894286, 
+                              106.16025019756556 20.910096684261074, 
+                              106.16028892345794 20.91009346349186, 
+                              106.16029946077435 20.910041123884014, 
+                              106.16017731578192 20.910027143763543, 
+                              106.15995333766462 20.909983749333822, 
+                              106.15985374788846 20.909961733135894))'),
+    '1', 
+    '1', 
+    '1', 
+    763.00, 
+    'Nguyễn Thị Hiểm', 
+    'Thửa 293, tờ 18. Diện tích: 763m²'
+);
+
+INSERT INTO coordinates_location (points, province_id, district_id, ward_id, area, owner_name, content)
+VALUES (
+    ST_GeomFromText('POLYGON((105.83961856292417 20.98763476707875,
+                              105.8397474448088 20.987635938113957,
+                              105.8405619893709 20.987624694150025,
+                              105.84056279947755 20.987597593358316,
+                              105.8405801106048 20.9875975079202,
+                              105.84057634530501 20.98692462277316,
+                              105.83991669280418 20.986944135188004,
+                              105.83961471105587 20.98694562413588,
+                              105.83961856292417 20.98763476707875))'),
+    '01',
+    '009',
+    '00358',
+    7669.4,
+    '',
+    'Thửa 1, tờ 103. Diện tích: 7669.4m²'
+);
+
+
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
