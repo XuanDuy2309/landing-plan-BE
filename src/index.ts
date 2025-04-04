@@ -23,7 +23,7 @@ app.get("/tiles/:z/:x/:y.png", (req, res) => {
   const tilePath = path.join(TILE_FOLDER, z, x, `${flippedY}.png`);
   res.sendFile(tilePath, (err) => {
         if (err) {
-            res.status(404).send("Tile not found");
+            
         }
     });
 });

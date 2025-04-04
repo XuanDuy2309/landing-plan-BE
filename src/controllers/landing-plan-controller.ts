@@ -1,6 +1,7 @@
 
 import { Request, Response } from "express";
 import path from "path";
+import { CoordinatesLocationModel } from "../models";
 
 const TILE_DIR = path.resolve(__dirname, "../../dong-anh-2030");
 
@@ -12,7 +13,7 @@ export const getTile = (req: Request, res: Response) => {
 
     const adjustedY = maxY - yTile;
 
-    
+
     const tilePath = path.join(__dirname, "../../", TILE_DIR, z, x, `${adjustedY}.png`);
     console.log(tilePath)
     res.sendFile(tilePath, (err) => {
@@ -21,3 +22,23 @@ export const getTile = (req: Request, res: Response) => {
         }
     });
 };
+
+export class LandingPlanController {
+    async findCoordinatesLocation(req: any, res: any) {
+        const { lat, lon } = req.query;
+        const latFloat = parseFloat(lat as string);
+        const lonFloat = parseFloat(lon as string);
+
+        if (isNaN(latFloat) || isNaN(lonFloat)) {
+            return res.status(400).json({ message: "Invalid latitude or longitude" });
+        }
+
+        try {
+            const coordinatesLocationModel = new CoordinatesLocationModel();
+            const result = await coordinatesLocationModel.findByLatLon(latFloat, lonFloat);
+            res.status(200).json(result);
+        } catch (error) {
+            res.status(500).json({ message: "Error fetching coordinates location", error });
+        }
+    }
+}
