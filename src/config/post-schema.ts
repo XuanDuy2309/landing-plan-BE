@@ -20,14 +20,6 @@ export const postSchema = z.object({
         required_error: "Vui lòng nhập diện tích",
         invalid_type_error: "Diện tích không hợp lệ"
     }),
-    width: z.number({
-        required_error: "Vui lòng nhập chiều ngang",
-        invalid_type_error: "Chiều ngang không hợp lệ"
-    }),
-    height: z.number({
-        required_error: "Vui lòng nhập chiều dài",
-        invalid_type_error: "Chiều dài không hợp lệ"
-    }),
 
     price_for_buy: z.number().optional(),
     price_for_rent: z.number().optional(),

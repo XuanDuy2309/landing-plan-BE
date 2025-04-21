@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: localhost:8889
--- Thời gian đã tạo: Th4 04, 2025 lúc 01:39 AM
+-- Thời gian đã tạo: Th4 21, 2025 lúc 05:32 PM
 -- Phiên bản máy phục vụ: 8.0.40
 -- Phiên bản PHP: 8.3.14
 
@@ -39,7 +39,7 @@ CREATE TABLE `coordinates_location` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `coordinates_location` polygon()
+-- Đang đổ dữ liệu cho bảng `coordinates_location`
 --
 
 INSERT INTO `coordinates_location` (`id`, `points`, `province_id`, `district_id`, `ward_id`, `area`, `owner_name`, `content`) VALUES
@@ -776,6 +776,145 @@ INSERT INTO `districts` (`id`, `name`, `gso_id`, `province_gso_id`, `province_id
 -- --------------------------------------------------------
 
 --
+-- Cấu trúc bảng cho bảng `planning_maps`
+--
+
+CREATE TABLE `planning_maps` (
+  `id` int UNSIGNED NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text,
+  `folder_path` text NOT NULL,
+  `bounds` polygon NOT NULL,
+  `province_id` int UNSIGNED DEFAULT NULL,
+  `district_id` int UNSIGNED DEFAULT NULL,
+  `ward_id` int UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `planning_maps`
+--
+
+INSERT INTO `planning_maps` (`id`, `name`, `description`, `folder_path`, `bounds`, `province_id`, `district_id`, `ward_id`, `created_at`) VALUES
+(1, 'Quy hoạch Đông Anh 2030', 'Quy hoạch chi tiết cho huyện Đông Anh, Hà Nội, năm 2030.', '/home/thaihoang/Documents/Workspace/landing-plan-BE/public/tile-layer/dong-anh-2030', 0x0000000001030000000100000005000000332b2515d76e5a40376277cb1f1135407e82d5a24f7b5a40376277cb1f1135407e82d5a24f7b5a40de5f98a7ce343540332b2515d76e5a40de5f98a7ce343540332b2515d76e5a40376277cb1f113540, NULL, NULL, NULL, '2025-04-21 17:31:51');
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `posts`
+--
+
+CREATE TABLE `posts` (
+  `id` int NOT NULL,
+  `type` enum('1','2','3') DEFAULT '1',
+  `purpose` enum('1','2','3') DEFAULT '1',
+  `type_asset` enum('1','2','3','4','5','6','7','8') DEFAULT NULL,
+  `status` enum('1','2','3') DEFAULT '1',
+  `image_links` varchar(255) DEFAULT NULL,
+  `video_links` varchar(255) DEFAULT NULL,
+  `coordinates` polygon DEFAULT NULL,
+  `direction_land` enum('1','2','3','4','5','6','7','8') DEFAULT NULL,
+  `area` float DEFAULT NULL,
+  `width` float DEFAULT NULL,
+  `height` float DEFAULT NULL,
+  `price_for_buy` float DEFAULT NULL,
+  `price_for_rent` float DEFAULT NULL,
+  `price_start` float DEFAULT NULL,
+  `price_current` float DEFAULT NULL,
+  `bid_step` float DEFAULT NULL,
+  `max_bid` float DEFAULT NULL,
+  `start_date` datetime DEFAULT NULL,
+  `end_date` datetime DEFAULT NULL,
+  `number_floors` int DEFAULT NULL,
+  `number_bedrooms` int DEFAULT NULL,
+  `number_bathrooms` int DEFAULT NULL,
+  `room_number` int DEFAULT NULL,
+  `in_alley` enum('0','1') DEFAULT NULL,
+  `title` varchar(255) DEFAULT NULL,
+  `description` longtext,
+  `lng` float DEFAULT NULL,
+  `lat` float DEFAULT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `owner_name` varchar(255) DEFAULT NULL,
+  `owner_phone` varchar(255) DEFAULT NULL,
+  `group_id` int DEFAULT NULL,
+  `create_by_id` int DEFAULT NULL,
+  `create_at` datetime DEFAULT NULL,
+  `update_at` datetime DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `posts`
+--
+
+INSERT INTO `posts` (`id`, `type`, `purpose`, `type_asset`, `status`, `image_links`, `video_links`, `coordinates`, `direction_land`, `area`, `width`, `height`, `price_for_buy`, `price_for_rent`, `price_start`, `price_current`, `bid_step`, `max_bid`, `start_date`, `end_date`, `number_floors`, `number_bedrooms`, `number_bathrooms`, `room_number`, `in_alley`, `title`, `description`, `lng`, `lat`, `address`, `owner_name`, `owner_phone`, `group_id`, `create_by_id`, `create_at`, `update_at`) VALUES
+(21, '2', '3', '3', '1', '[\"https://example.com/image1.jpg\",\"https://example.com/image2.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, NULL, '2025-04-18 14:00:00'),
+(22, '2', '3', '3', '1', '[\"http://localhost:3000/uploads/xxx.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, NULL, '2025-04-18 14:00:00'),
+(23, '2', '3', '3', '1', '[\"http://localhost:3000/uploads/1743271793930-228510595-avt.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, NULL, '2025-04-18 14:00:00'),
+(24, '2', '3', '3', '1', '[\"https://example.com/image1.jpg\",\"https://example.com/image2.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá nhaf', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 106.66, 10.7626, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, NULL, '2025-04-18 14:00:00'),
+(25, '2', '1', '3', '1', '[\"http://localhost:3000/uploads/1743271793930-228510595-avt.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, NULL, '2025-04-18 14:00:00'),
+(26, '2', '1', '3', '1', '[\"http://localhost:3000/uploads/1743271793930-228510595-avt.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, NULL, '2025-04-20 01:47:38'),
+(27, '2', '1', '3', '1', '[\"http://localhost:3000/uploads/1743271793930-228510595-avt.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, NULL, '2025-04-20 01:51:36'),
+(28, '2', '1', '3', '1', '[\"http://localhost:3000/uploads/1743271793930-228510595-avt.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, NULL, '2025-04-20 01:52:15'),
+(29, '2', '1', '3', '1', '[\"http://localhost:3000/uploads/1743271793930-228510595-avt.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, NULL, '2025-04-20 01:53:31'),
+(30, '2', '1', '3', '1', '[\"http://localhost:3000/uploads/1743271793930-228510595-avt.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, '2025-04-20 00:00:00', '2025-04-20 01:55:24'),
+(31, '2', '1', '3', '1', '[\"http://localhost:3000/uploads/1743271793930-228510595-avt.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, '2025-04-20 01:55:57', '2025-04-20 01:55:57'),
+(32, '2', '1', '3', '1', '[\"http://localhost:3000/uploads/1743271793930-228510595-avt.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 3, '2025-04-20 02:30:28', '2025-04-20 02:30:28'),
+(33, '2', '1', '3', '1', '[\"http://localhost:3000/uploads/1743271793930-228510595-avt.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 20, '2025-04-20 02:32:41', '2025-04-20 02:32:41'),
+(34, '2', '1', '3', '1', '[\"http://localhost:3000/uploads/1743271793930-228510595-avt.jpg\", \"https://example.com/xxx.jpg\"]', '[\"https://example.com/video1.mp4\"]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 120.5, 8, 15, 2500000000, 15000000, 2000000000, 2100000000, 50000000, 3000000000, '2025-04-20 00:00:00', '2025-05-01 00:00:00', 3, 4, 3, 7, '0', 'đấu giá', 'Nhà đẹp, vị trí trung tâm, gần trường học và bệnh viện.', 5, 5, '123 Đường Lê Lợi, Quận 1, TP.HCM', 'Nguyễn Văn A', '0909123456', 5, 3, '2025-04-20 02:35:45', '2025-04-20 02:35:45'),
+(35, '1', '1', '1', '1', '[\"http://localhost:3000/uploads/1745253106796-590354105-bg-auth.png\"]', '[]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 123, 123, 123, 123, 123, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, NULL, '0', 'nhà thổ cư HN', NULL, 123, 123, NULL, NULL, NULL, NULL, 3, '2025-04-21 23:33:47', '2025-04-21 23:33:47'),
+(36, '1', '2', '1', '1', '[\"http://localhost:3000/uploads/1745253106796-590354105-bg-auth.png\"]', '[]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 123, 123, 123, 123, 123, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, NULL, '0', 'nhà thổ cư HN', NULL, 123, 123, NULL, NULL, NULL, NULL, 3, '2025-04-21 23:34:53', '2025-04-21 23:34:53'),
+(37, '1', '2', '1', '1', '[\"http://localhost:3000/uploads/1745253106796-590354105-bg-auth.png\"]', '[]', 0x00000000010300000001000000050000000000000000000000000000000000000000000000000024400000000000000000000000000000244000000000000024400000000000000000000000000000244000000000000000000000000000000000, '1', 123, 123, 123, 123, 123, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, NULL, '0', 'nhà thổ cư HN', NULL, 123, 123, NULL, NULL, NULL, NULL, 3, '2025-04-21 23:40:43', '2025-04-21 23:40:43');
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `post_likes`
+--
+
+CREATE TABLE `post_likes` (
+  `id` int NOT NULL,
+  `post_id` int DEFAULT NULL,
+  `create_by_id` int DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT (now())
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `post_likes`
+--
+
+INSERT INTO `post_likes` (`id`, `post_id`, `create_by_id`, `created_at`) VALUES
+(2, 22, 3, '2025-04-19 15:13:21'),
+(3, 22, 3, '2025-04-19 16:06:00'),
+(4, 21, 3, '2025-04-19 16:07:48'),
+(5, 21, 3, '2025-04-19 16:07:58'),
+(6, 24, 3, '2025-04-19 18:27:42'),
+(7, 25, 3, '2025-04-19 18:27:50'),
+(12, 34, 3, '2025-04-20 17:24:41');
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `post_sharing`
+--
+
+CREATE TABLE `post_sharing` (
+  `id` int NOT NULL,
+  `post_id` int DEFAULT NULL,
+  `create_by_id` int DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT (now())
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `post_sharing`
+--
+
+INSERT INTO `post_sharing` (`id`, `post_id`, `create_by_id`, `created_at`) VALUES
+(1, NULL, NULL, '2025-04-18 18:40:04');
+
+-- --------------------------------------------------------
+
+--
 -- Cấu trúc bảng cho bảng `provinces`
 --
 
@@ -860,6 +999,20 @@ INSERT INTO `provinces` (`id`, `name`, `gso_id`, `created_at`, `lastest_update_a
 -- --------------------------------------------------------
 
 --
+-- Cấu trúc bảng cho bảng `timeline_auction`
+--
+
+CREATE TABLE `timeline_auction` (
+  `id` int NOT NULL,
+  `create_by` int DEFAULT NULL,
+  `post_id` int DEFAULT NULL,
+  `price` float DEFAULT NULL,
+  `create_at` timestamp NULL DEFAULT (now())
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Cấu trúc bảng cho bảng `uploads`
 --
 
@@ -880,7 +1033,31 @@ CREATE TABLE `uploads` (
 INSERT INTO `uploads` (`id`, `user_id`, `group_id`, `link`, `type`, `created_at`, `updated_at`) VALUES
 (31, 20, NULL, 'http://localhost:3000/uploads/1743271793930-228510595-avt.jpg', 'image', '2025-03-29 18:09:53', '2025-03-29 18:09:53'),
 (32, 3, NULL, 'http://localhost:3000/uploads/1743704464548-48021993-Screenshot 2025-03-24 at 22.19.59.png', 'image', '2025-04-03 18:21:04', '2025-04-03 18:21:04'),
-(33, 3, NULL, 'http://localhost:3000/uploads/1743704670304-491676505-Screenshot 2025-03-28 at 10.49.48.png', 'image', '2025-04-03 18:24:30', '2025-04-03 18:24:30');
+(33, 3, NULL, 'http://localhost:3000/uploads/1743704670304-491676505-Screenshot 2025-03-28 at 10.49.48.png', 'image', '2025-04-03 18:24:30', '2025-04-03 18:24:30'),
+(43, 3, NULL, 'http://localhost:3000/uploads/1743793873811-37283651-demo.mov', 'video', '2025-04-04 19:11:13', '2025-04-04 19:11:13'),
+(44, 3, NULL, 'http://localhost:3000/uploads/1743793995783-772165266-demo.mov', 'video', '2025-04-04 19:13:15', '2025-04-04 19:13:15'),
+(45, 3, NULL, 'http://localhost:3000/uploads/1743794152471-989561223-Download.mp4', 'video', '2025-04-04 19:15:52', '2025-04-04 19:15:52'),
+(46, 3, NULL, 'http://localhost:3000/uploads/1743794295544-142995848-Download.mp4', 'video', '2025-04-04 19:18:15', '2025-04-04 19:18:15'),
+(47, 3, NULL, 'http://localhost:3000/uploads/1743794345045-673688824-Download.mp4', 'video', '2025-04-04 19:19:05', '2025-04-04 19:19:05'),
+(48, 3, NULL, 'http://localhost:3000/uploads/1743794408867-446063278-Download.mp4', 'video', '2025-04-04 19:20:09', '2025-04-04 19:20:09'),
+(49, 3, NULL, 'http://localhost:3000/uploads/1743794589966-325158424-Download.mp4', 'video', '2025-04-04 19:23:10', '2025-04-04 19:23:10'),
+(50, 3, NULL, 'http://localhost:3000/uploads/1743846313474-502978258-no-image-square.png', 'image', '2025-04-05 09:45:13', '2025-04-05 09:45:13'),
+(51, 3, NULL, 'http://localhost:3000/uploads/1743925810567-850403417-1dab7da8-78bb-4c20-86f7-65207b559b90.jpeg', 'image', '2025-04-06 07:50:10', '2025-04-06 07:50:10'),
+(52, 3, NULL, 'http://localhost:3000/uploads/1743925852009-589028813-Download.mp4', 'video', '2025-04-06 07:50:52', '2025-04-06 07:50:52'),
+(53, 3, NULL, 'http://localhost:3000/uploads/1743925864481-626299135-avt.jpg', 'image', '2025-04-06 07:51:04', '2025-04-06 07:51:04'),
+(54, 3, NULL, 'http://localhost:3000/uploads/1743926209513-317520428-avt.jpg', 'image', '2025-04-06 07:56:49', '2025-04-06 07:56:49'),
+(55, 3, NULL, 'http://localhost:3000/uploads/1743926217827-964178804-Download.mp4', 'video', '2025-04-06 07:56:58', '2025-04-06 07:56:58'),
+(56, 3, NULL, 'http://localhost:3000/uploads/1744043214885-667764789-avt.jpg', 'image', '2025-04-07 16:26:54', '2025-04-07 16:26:54'),
+(57, 3, NULL, 'http://localhost:3000/uploads/1744043221147-677140587-Download.mp4', 'video', '2025-04-07 16:27:01', '2025-04-07 16:27:01'),
+(58, 3, NULL, 'http://localhost:3000/uploads/1744213715240-136159296-1dab7da8-78bb-4c20-86f7-65207b559b90.jpeg', 'image', '2025-04-09 15:48:35', '2025-04-09 15:48:35'),
+(59, 3, NULL, 'http://localhost:3000/uploads/1745252112756-608075389-avt.jpg', 'image', '2025-04-21 16:15:12', '2025-04-21 16:15:12'),
+(60, 3, NULL, 'http://localhost:3000/uploads/1745252112758-921751143-bg-auth.png', 'image', '2025-04-21 16:15:12', '2025-04-21 16:15:12'),
+(61, 3, NULL, 'http://localhost:3000/uploads/1745252112761-933368757-bg-value-for-customer.png', 'image', '2025-04-21 16:15:12', '2025-04-21 16:15:12'),
+(62, 3, NULL, 'http://localhost:3000/uploads/1745252122209-206713342-Download.mp4', 'video', '2025-04-21 16:15:22', '2025-04-21 16:15:22'),
+(63, 3, NULL, 'http://localhost:3000/uploads/1745252719628-945921917-avt.jpg', 'image', '2025-04-21 16:25:19', '2025-04-21 16:25:19'),
+(64, 3, NULL, 'http://localhost:3000/uploads/1745252719635-685545017-bg-auth.png', 'image', '2025-04-21 16:25:19', '2025-04-21 16:25:19'),
+(65, 3, NULL, 'http://localhost:3000/uploads/1745252719637-77597416-bg-value-for-customer.png', 'image', '2025-04-21 16:25:19', '2025-04-21 16:25:19'),
+(66, 3, NULL, 'http://localhost:3000/uploads/1745253106796-590354105-bg-auth.png', 'image', '2025-04-21 16:31:46', '2025-04-21 16:31:46');
 
 -- --------------------------------------------------------
 
@@ -911,7 +1088,7 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`id`, `username`, `password`, `email`, `fullname`, `phone_number`, `address`, `dob`, `avatar`, `background`, `gender`, `role`, `status`, `created_at`) VALUES
 (1, 'duydx', '$2b$10$opKRp5KL3/GEXw7eNKMqSOZC62QMOlewH0rWxBYNADmxT6MTMkmou', 'duydao23092003@gmail.com', 'duy dao', '0123456789', 'ha noi', '2003-09-23', 'http://localhost:3000/uploads/1742048263489-502561574-avt.jpg', 'http://localhost:3000/uploads/1742048039934-439552964-bg-value-for-customer.png', 'male', NULL, NULL, NULL),
-(3, 'duydx123', '$2b$10$vSHmd.pDAKsAOfwisyg6TOgUb2T4iQgK6Kaoxdr2a3rwQOPnyDEda', 'duydao23092003@gmail.com', 'duy dao', '0192384751', NULL, NULL, 'http://localhost:3000/uploads/1743704464548-48021993-Screenshot 2025-03-24 at 22.19.59.png', 'http://localhost:3000/uploads/1743704670304-491676505-Screenshot 2025-03-28 at 10.49.48.png', 'male', 'user', 'active', NULL),
+(3, 'duydx123', '$2b$10$vSHmd.pDAKsAOfwisyg6TOgUb2T4iQgK6Kaoxdr2a3rwQOPnyDEda', 'duydao23092003@gmail.com', 'duy dao', '0192384751', 'Xã Đại Hưng, Huyện Khoái Châu, Tỉnh Hưng Yên', '2025-04-09', 'http://localhost:3000/uploads/1743925864481-626299135-avt.jpg', 'http://localhost:3000/uploads/1744043214885-667764789-avt.jpg', 'male', 'user', 'active', NULL),
 (15, 'duydx2k3', '$2b$10$Yq79MgW0tLjzLRh6xqQZIumsH1GPiSfLVMBGAzRUOjq4WiTVLY/Wy', 'duyxuandao23092003@gmail.com', 'dao xuan duy', '0398876732', NULL, NULL, NULL, '', 'male', 'user', 'active', NULL),
 (18, 'duydx12345', '$2b$10$Qkh/G9dnEc059nPPedbAF.qWR.czTUnV1H/Wz7cSF4JQ0ivEWp6AC', 'duydao230920031@gmail.com', 'duy dao', '019234751', NULL, NULL, NULL, '', 'male', 'user', 'active', NULL),
 (19, 'duydx1', '$2b$10$FUDxQPbisymF4zt6hbvQVORxaqW3bb2PQ6woRyhzHk8khHRHjhNNS', 'duyxuandao1@gmail.com', 'dao xuan duy', '0398876733', NULL, NULL, NULL, '', 'male', 'user', 'active', NULL),
@@ -11591,10 +11768,51 @@ ALTER TABLE `districts`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Chỉ mục cho bảng `planning_maps`
+--
+ALTER TABLE `planning_maps`
+  ADD PRIMARY KEY (`id`),
+  ADD SPATIAL KEY `bounds` (`bounds`),
+  ADD KEY `province_id` (`province_id`),
+  ADD KEY `district_id` (`district_id`),
+  ADD KEY `ward_id` (`ward_id`);
+
+--
+-- Chỉ mục cho bảng `posts`
+--
+ALTER TABLE `posts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `create_by_id` (`create_by_id`);
+
+--
+-- Chỉ mục cho bảng `post_likes`
+--
+ALTER TABLE `post_likes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `post_id` (`post_id`),
+  ADD KEY `create_by_id` (`create_by_id`);
+
+--
+-- Chỉ mục cho bảng `post_sharing`
+--
+ALTER TABLE `post_sharing`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `post_id` (`post_id`),
+  ADD KEY `create_by_id` (`create_by_id`);
+
+--
 -- Chỉ mục cho bảng `provinces`
 --
 ALTER TABLE `provinces`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Chỉ mục cho bảng `timeline_auction`
+--
+ALTER TABLE `timeline_auction`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_timeline_post` (`post_id`),
+  ADD KEY `fk_timeline_user` (`create_by`);
 
 --
 -- Chỉ mục cho bảng `uploads`
@@ -11628,10 +11846,40 @@ ALTER TABLE `coordinates_location`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+-- AUTO_INCREMENT cho bảng `planning_maps`
+--
+ALTER TABLE `planning_maps`
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT cho bảng `posts`
+--
+ALTER TABLE `posts`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+
+--
+-- AUTO_INCREMENT cho bảng `post_likes`
+--
+ALTER TABLE `post_likes`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+
+--
+-- AUTO_INCREMENT cho bảng `post_sharing`
+--
+ALTER TABLE `post_sharing`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT cho bảng `timeline_auction`
+--
+ALTER TABLE `timeline_auction`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT cho bảng `uploads`
 --
 ALTER TABLE `uploads`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
 
 --
 -- AUTO_INCREMENT cho bảng `users`
@@ -11650,57 +11898,47 @@ ALTER TABLE `wards`
 --
 
 --
+-- Các ràng buộc cho bảng `planning_maps`
+--
+ALTER TABLE `planning_maps`
+  ADD CONSTRAINT `planning_maps_ibfk_1` FOREIGN KEY (`province_id`) REFERENCES `provinces` (`id`),
+  ADD CONSTRAINT `planning_maps_ibfk_2` FOREIGN KEY (`district_id`) REFERENCES `districts` (`id`),
+  ADD CONSTRAINT `planning_maps_ibfk_3` FOREIGN KEY (`ward_id`) REFERENCES `wards` (`id`);
+
+--
+-- Các ràng buộc cho bảng `posts`
+--
+ALTER TABLE `posts`
+  ADD CONSTRAINT `posts_ibfk_1` FOREIGN KEY (`create_by_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `posts_ibfk_2` FOREIGN KEY (`create_by_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Các ràng buộc cho bảng `post_likes`
+--
+ALTER TABLE `post_likes`
+  ADD CONSTRAINT `post_likes_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `posts` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `post_likes_ibfk_2` FOREIGN KEY (`create_by_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Các ràng buộc cho bảng `post_sharing`
+--
+ALTER TABLE `post_sharing`
+  ADD CONSTRAINT `post_sharing_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `posts` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `post_sharing_ibfk_2` FOREIGN KEY (`create_by_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Các ràng buộc cho bảng `timeline_auction`
+--
+ALTER TABLE `timeline_auction`
+  ADD CONSTRAINT `fk_timeline_post` FOREIGN KEY (`post_id`) REFERENCES `posts` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_timeline_user` FOREIGN KEY (`create_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
 -- Các ràng buộc cho bảng `uploads`
 --
 ALTER TABLE `uploads`
   ADD CONSTRAINT `uploads_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
-
-
-
-CREATE TABLE planning_maps (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  folder_path TEXT NOT NULL,
-  bounds POLYGON NOT NULL,
-  province_id INT UNSIGNED,
-  district_id INT UNSIGNED,
-  ward_id INT UNSIGNED,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (province_id) REFERENCES provinces(id),
-  FOREIGN KEY (district_id) REFERENCES districts(id),
-  FOREIGN KEY (ward_id) REFERENCES wards(id),
-  SPATIAL INDEX (bounds),
-  INDEX (province_id),
-  INDEX (district_id),
-  INDEX (ward_id)
-);
-
-INSERT INTO planning_maps (
-  name, 
-  description, 
-  folder_path, 
-  bounds, 
-  province_id, 
-  district_id, 
-  ward_id
-) 
-VALUES (
-  'Quy hoạch Đông Anh 2030', 
-  'Quy hoạch chi tiết cho huyện Đông Anh, Hà Nội, năm 2030.',
-  '/home/thaihoang/Documents/Workspace/landing-plan-BE/public/tile-layer/dong-anh-2030',
-  ST_GeomFromText('POLYGON((
-    105.7318776 21.0668914,
-    105.9267356 21.0668914,
-    105.9267356 21.2062783,
-    105.7318776 21.2062783,
-    105.7318776 21.0668914
-  ))'),
-  NULL,   -- province_id cho Hà Nội
-  NULL, -- district_id cho Đông Anh
-  NULL -- ward_id (để NULL nếu không xác định)
-)
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

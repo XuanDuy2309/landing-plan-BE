@@ -8,7 +8,7 @@ export class PostController {
         const { page, page_size, purpose } = req.query;
         const post = new PostModel();
         try {
-            const data: any = await post.getAll(Number(page), Number(page_size), { ...req.query });
+            const data: any = await post.getAll(page, page_size, { ...req.query });
             return res.status(200).json(data);
         } catch (err: any) {
             return res.status(400).json({ message: err.message || 'Failed to fetch posts' });

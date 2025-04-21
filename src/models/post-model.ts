@@ -88,7 +88,7 @@ export class PostModel {
         const filterConditions: string[] = [];
 
         if (filters.query) {
-            filterConditions.push(`name LIKE ?`);
+            filterConditions.push(`p.address LIKE ?`);
             queryParams.push(`%${filters.query}%`);
         }
 
@@ -143,8 +143,8 @@ export class PostModel {
 
         if (filters.lng !== undefined && filters.lat !== undefined) {
             const range = filters.range || 100;
-            filterConditions.push(`ST_Distance_Sphere(POINT(posts.lng, posts.lat),POINT(?, ?)) <= ${range}`);
-            queryParams.push(filters.lng, filters.lat);
+            filterConditions.push(`ST_Distance_Sphere(POINT(p.lng, p.lat),POINT(?, ?)) <= ${range}`);
+            queryParams.push(Number(filters.lng), Number(filters.lat));
         }
 
         return filterConditions.length > 0 ? ` WHERE ${filterConditions.join(' AND ')}` : '';
@@ -337,7 +337,9 @@ export class PostModel {
     }
 
     async getAll(page: number = 1, page_size: number = 10, filters: any = {}) {
-        const offset = (page - 1) * page_size;
+        const pageTemp = Number(page)
+        const pageSize = Number(page_size)
+        const offset = (pageTemp - 1) * pageSize;
         try {
             let queryParams: any = [];
             const whereClause = this.buildWhereClause(filters, queryParams);
@@ -360,14 +362,14 @@ export class PostModel {
             `;
 
             const countQuery = `SELECT COUNT(*) as total FROM posts p ${whereClause}`;
-            queryParams.push(page_size, offset);
+            queryParams.push(pageSize, offset);
 
             const [rows]: any = await pool.query(query, queryParams);
             const [[totalCount]]: any = await pool.query(countQuery, queryParams.slice(0, -2));
-
             return {
                 data: rows.map((row: any) => ({
                     ...row,
+                    coordinates: row.coordinates ? (row.coordinates[0] as { x: number; y: number }[]).map((coord: { x: number; y: number }) => `${coord.x} ${coord.y}`) : [],
                     like_by_ids: row.like_by_ids ? row.like_by_ids.split(',').map(Number) : [],
                     share_count: row.share_count || 0,
                 })),
@@ -375,19 +377,40 @@ export class PostModel {
                 message: 'success',
                 total: totalCount.total,
                 page,
-                totalPages: Math.ceil(totalCount.total / page_size),
+                totalPages: Math.ceil(totalCount.total / pageSize),
             };
         } catch (err: any) {
+            console.log(err)
             return { data: null, status: false, message: err.message || 'Failed to fetch posts' };
         }
     }
 
     async getDetailPost(post_id?: number) {
         try {
-            const [rows]: any = await pool.query('SELECT * FROM posts WHERE id = ?', [post_id]);
-            return { data: rows[0] || {}, status: true, message: "success" };
-        } catch (err) {
-            return { data: null, status: false, message: err }
+            const query = `
+                SELECT 
+                    p.*, 
+                    u.fullname AS create_by_name, 
+                    u.email AS create_by_email,
+                    u.phone_number AS create_by_phone,
+                    u.avatar AS create_by_avatar,
+                    (SELECT GROUP_CONCAT(lp.create_by_id) FROM post_likes lp WHERE lp.post_id = p.id) AS like_by_ids,
+                    (SELECT COUNT(*) FROM post_sharing sp WHERE sp.post_id = p.id) AS share_count
+                FROM posts p
+                LEFT JOIN users u ON p.create_by_id = u.id
+                WHERE p.id = ?
+            `;
+            const [rows]: any = await pool.query(query, [post_id]);
+            if (rows.length === 0) {
+                return { data: null, status: false, message: "Post not found" };
+            }
+            const post = rows[0];
+            post.coordinates = post.coordinates ? (post.coordinates[0] as { x: number; y: number }[]).map((coord: { x: number; y: number }) => `${coord.x} ${coord.y}`) : []
+            post.like_by_ids = post.like_by_ids ? post.like_by_ids.split(',').map(Number) : [];
+            post.share_count = post.share_count || 0;
+            return { data: post, status: true, message: "success" };
+        } catch (err: any) {
+            return { data: null, status: false, message: err.message || "Failed to fetch post details" };
         }
     }
 
