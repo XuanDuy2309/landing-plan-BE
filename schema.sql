@@ -11656,6 +11656,52 @@ ALTER TABLE `uploads`
   ADD CONSTRAINT `uploads_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
+
+
+CREATE TABLE planning_maps (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  folder_path TEXT NOT NULL,
+  bounds POLYGON NOT NULL,
+  province_id INT UNSIGNED,
+  district_id INT UNSIGNED,
+  ward_id INT UNSIGNED,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (province_id) REFERENCES provinces(id),
+  FOREIGN KEY (district_id) REFERENCES districts(id),
+  FOREIGN KEY (ward_id) REFERENCES wards(id),
+  SPATIAL INDEX (bounds),
+  INDEX (province_id),
+  INDEX (district_id),
+  INDEX (ward_id)
+);
+
+INSERT INTO planning_maps (
+  name, 
+  description, 
+  folder_path, 
+  bounds, 
+  province_id, 
+  district_id, 
+  ward_id
+) 
+VALUES (
+  'Quy hoạch Đông Anh 2030', 
+  'Quy hoạch chi tiết cho huyện Đông Anh, Hà Nội, năm 2030.',
+  '/home/thaihoang/Documents/Workspace/landing-plan-BE/public/tile-layer/dong-anh-2030',
+  ST_GeomFromText('POLYGON((
+    105.7318776 21.0668914,
+    105.9267356 21.0668914,
+    105.9267356 21.2062783,
+    105.7318776 21.2062783,
+    105.7318776 21.0668914
+  ))'),
+  NULL,   -- province_id cho Hà Nội
+  NULL, -- district_id cho Đông Anh
+  NULL -- ward_id (để NULL nếu không xác định)
+)
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

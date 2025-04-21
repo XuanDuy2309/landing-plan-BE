@@ -1,10 +1,9 @@
 import { Router } from "express";
-import {  getTile, LandingPlanController } from "../controllers/landing-plan-controller";
+import { LandingPlanController } from "../controllers";
 
 const LandingPlanRoute = Router();
 const landingPlanController = new LandingPlanController();
 
-LandingPlanRoute.get("/:z/:x/:y.png", getTile);
-LandingPlanRoute.get("/coordinates", landingPlanController.findCoordinatesLocation);
+LandingPlanRoute.get("/", landingPlanController.findMapByLatLon);
 
 export default LandingPlanRoute;

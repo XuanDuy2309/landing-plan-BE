@@ -1,54 +1,78 @@
 import pool from "../config/db";
 
-export class CoordinatesLocationModel {
+export class LandingPlanModel {
     id?: number;
-    points?: string; // POLYGON được lưu dưới dạng WKT (Well-Known Text)
-    province_id?: string;
-    district_id?: string;
-    ward_id?: string;
-    area?: number;
-    owner_name?: string;
-    content?: string;
-
+    name?: string;
+    description?: string;
+    folder_path?: string;
+    bounds?: number[][];
+    province_id?: number;
+    district_id?: number;
+    ward_id?: number;
+    created_at?: string;  
+    
     constructor() {
 
     }
 
-    async findByLatLon(lat: number, lon: number) {
+    async findMapByLatLon(lat: number, lon: number) {
         const query = `
-          SELECT id, ST_AsText(points) as points, area, content, owner_name
-          FROM coordinates_location
-          WHERE ST_Contains(points, ST_GeomFromText(?))
+          SELECT 
+            id,
+            name,
+            description,
+            folder_path,
+            ST_AsText(bounds) AS bounds,
+            province_id,
+            district_id,
+            ward_id,
+            created_at
+          FROM planning_maps
+          WHERE ST_Contains(bounds, ST_GeomFromText(?))
+          LIMIT 1
         `;
-
+    
         const pointWKT = `POINT(${lon} ${lat})`;
-
+    
         try {
-            const [rows]: any = await pool.query(query, [pointWKT]);
-
-            // Xử lý chuỗi WKT của Polygon
-            const polygonText = rows[0].points.replace("POLYGON((", "").replace("))", "");
-            // Tách các điểm tọa độ, sau đó đảo thứ tự (lat, lon)
-            const pointsArray = polygonText.split(",").map((point: string) => {
-                const [lon, lat] = point.trim().split(" ").map(Number);  // Tách lon và lat đúng thứ tự
-                return [lat, lon];  // Đảm bảo giữ nguyên thứ tự [lat, lon]
-            });
-            this.id = rows[0].id;
-            this.points = pointsArray
-            this.province_id = rows[0].province_id;
-            this.district_id = rows[0].district_id;
-            this.ward_id = rows[0].ward_id;
-            this.area = Number(rows[0].area);
-            this.owner_name = rows[0].owner_name;
-            this.content = rows[0].content;
+          const [rows]: any = await pool.query(query, [pointWKT]);
+    
+          if (rows.length === 0) {
             return {
-                data: this,// Trả về danh sách các tọa độ
-                status: true,
-                message: "success"
+              data: null,
+              status: false,
+              message: "Không tìm thấy bản đồ quy hoạch cho vị trí này."
             };
-
+          }
+    
+          const row = rows[0];
+    
+          // Xử lý bounds (POLYGON) từ WKT sang array [lat, lon][]
+          const polygonText = row.bounds.replace("POLYGON((", "").replace("))", "");
+          const pointsArray: number[][] = polygonText.split(",").map((point: string) => {
+            const [lng, lat] = point.trim().split(" ").map(Number);
+            return [lat, lng]; // đảo thứ tự thành [lat, lon]
+          });
+    
+          // Gán dữ liệu vào instance
+          this.id = row.id;
+          this.name = row.name;
+          this.description = row.description;
+          this.folder_path = row.folder_path;
+          this.bounds = pointsArray;
+          this.province_id = row.province_id;
+          this.district_id = row.district_id;
+          this.ward_id = row.ward_id;
+          this.created_at = row.created_at;
+    
+          return {
+            data: this,
+            status: true,
+            message: "success"
+          };
+    
         } catch (error) {
-            throw new Error(`Error executing query: ${error}`);
+          throw new Error(`Error executing query in PlanningMapModel: ${error}`);
         }
-    }
+      }
 }
