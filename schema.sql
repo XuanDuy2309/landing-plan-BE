@@ -39,7 +39,7 @@ CREATE TABLE `coordinates_location` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `coordinates_location`
+-- Đang đổ dữ liệu cho bảng `coordinates_location` polygon()
 --
 
 INSERT INTO `coordinates_location` (`id`, `points`, `province_id`, `district_id`, `ward_id`, `area`, `owner_name`, `content`) VALUES
