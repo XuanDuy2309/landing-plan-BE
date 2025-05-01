@@ -5,17 +5,14 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { socketService } from './service';
 
 dotenv.config();
 
 const app = express();
 const httpServer = createServer(app); // Tạo HTTP server
-export const io = new Server(httpServer, {
-  cors: {
-    origin: 'http://localhost:5173', // Chỉ cho phép từ frontend
-    credentials: true,
-  },
-});
+
+socketService.init(httpServer); // Khởi tạo socket với HTTP server
 
 const PORT = 3000;
 
@@ -36,15 +33,6 @@ app.get("/tiles/:z/:x/:y.png", (req, res) => {
     if (err) {
       res.status(404).send("Tile not found");
     }
-  });
-});
-
-// Socket.io logic
-io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
-
-  socket.on('disconnect', () => {
-    console.log('A user disconnected:', socket.id);
   });
 });
 

@@ -15,6 +15,19 @@ export class PostLikeModel {
         }
     }
 
+    async findOne(condition: { post_id: number; create_by_id: number }) {
+        try {
+            const [rows]: any = await pool.query(
+                'SELECT * FROM post_likes WHERE post_id = ? AND create_by_id = ? LIMIT 1',
+                [condition.post_id, condition.create_by_id]
+            );
+            return rows.length > 0 ? rows[0] : null;
+        } catch (err: any) {
+            return null;
+        }
+    }
+    
+
     async create() {
         try {
             const [rows]: any = await pool.query('INSERT INTO post_likes SET ?', [this]);

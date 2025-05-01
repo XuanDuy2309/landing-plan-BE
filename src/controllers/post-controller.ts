@@ -1,6 +1,6 @@
 
-import { io } from "..";
-import { PostLikeModel, PostModel, PostSharingModel, UserModel } from "../models";
+import { NotificationModel, NotificationType, PostLikeModel, PostModel, PostSharingModel, UserModel } from "../models";
+import { socketService } from "../service";
 
 
 export class PostController {
@@ -107,20 +107,51 @@ export class PostController {
             return res.status(400).json({ message: 'id not found' });
         }
 
-        const post = new PostLikeModel();
-        post.post_id = Number(id);
-        post.create_by_id = user.id;
+        const postLike = new PostLikeModel();
+        const post = new PostModel();
+        const notification = new NotificationModel();
+        const userModel = new UserModel();
 
-        const data = await post.create();
+        try {
+            const userData: any = await userModel.findUserById(user.id);
+            const postData: any = await post.getDetailPost(Number(id));
+            if (!postData.status) {
+                return res.status(404).json({ message: 'Post not found' });
+            }
 
-        io.emit('post_liked', {
-            post_id: id,
-            user_id: user.id,
-            message: `User ${user.id} liked post ${id}`,
-        });
+            // 🔒 Kiểm tra xem đã like chưa
+            const existed = await postLike.findOne({ post_id: Number(id), create_by_id: user.id });
+            if (existed) {
+                return res.status(200).json({ status: true, message: 'Already liked' });
+            }
 
-        return res.status(200).json(data);
+            // Thêm like
+            postLike.post_id = Number(id);
+            postLike.create_by_id = user.id;
+            const likeData = await postLike.create();
+
+            if (!likeData.status) {
+                return res.status(400).json(likeData);
+            }
+
+            // Gửi thông báo
+            notification.post_id = Number(id);
+            notification.receiver_id = postData.data.create_by_id;
+            notification.type = NotificationType.LIKE;
+            notification.sender_id = user.id;
+            notification.message = `${userData.data.fullname} đã thích bài viết của bạn.`;
+            await notification.create();
+
+            socketService.emitToUser(notification.receiver_id || 0, 'notification', {
+                ...notification
+            });
+
+            return res.status(200).json(likeData);
+        } catch (err: any) {
+            return res.status(500).json({ message: err.message || 'An error occurred' });
+        }
     }
+
 
     async unlikePost(req: any, res: any) {
         const { id } = req.params;
@@ -135,5 +166,25 @@ export class PostController {
         return res.status(200).json(data);
     }
 
+    async getPostLikes(req: any, res: any) {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ message: 'id not found' });
+        }
+        const postLike = new PostLikeModel();
+        const data = await postLike.getAllByPostId(Number(id));
+        return res.status(200).json(data);
+    }
 
+    async getPostFolowings(req: any, res: any) {
+        const { page, page_size, purpose } = req.query;
+        const { user } = req;
+        const post = new PostModel();
+        try {
+            const data: any = await post.getLikedAndSharedPosts(user.id, page, page_size, { ...req.query });
+            return res.status(200).json(data);
+        } catch (err: any) {
+            return res.status(400).json({ message: err.message || 'Failed to fetch posts' });
+        }
+    }
 }

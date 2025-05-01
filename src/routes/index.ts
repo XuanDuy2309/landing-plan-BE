@@ -9,6 +9,8 @@ import { DistrictRouter } from "./district";
 import { WardRouter } from "./ward";
 import LandingPlanRoute from "./landing-plan";
 import { PostRouter } from "./post";
+import { BidsRouter } from "./bids";
+import { NotificationRouter } from "./notification";
 
 export const Route = (app: any) => {
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -22,4 +24,6 @@ export const Route = (app: any) => {
   app.use('/district', DistrictRouter);
   app.use('/ward', WardRouter);
   app.use('/post', PostRouter);
+  app.use('/bids', BidsRouter);
+  app.use('/notification', NotificationRouter);
 };

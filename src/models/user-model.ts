@@ -1,5 +1,5 @@
-import pool from "../config/db";
 import bcrypt from "bcrypt";
+import pool from "../config/db";
 
 export enum Gender {
     MALE = 'male',
@@ -38,12 +38,67 @@ export class UserModel {
 
     }
 
-    async getAll() {
+    async getAll(page: number = 1, page_size: number = 10, filters: any = {}, sort: string = 'DESC') {
+        const pageTemp = Number(page)
+        const pageSize = Number(page_size)
+        const offset = (pageTemp - 1) * pageSize;
         try {
-            const [rows] = await pool.query('SELECT * FROM users');
-            return { data: rows, status: true, message: "success" };
-        } catch (err) {
-            return { data: null, status: false, message: err }
+            let queryParams: any = [];
+            let whereClause = 'WHERE 1=1';
+
+            // Áp dụng bộ lọc
+            if (filters.query) {
+                whereClause += ' AND fullname LIKE ?';
+                queryParams.push(`%${filters.query}%`);
+            }
+            if (filters.email) {
+                whereClause += ' AND email LIKE ?';
+                queryParams.push(`%${filters.email}%`);
+            }
+            if (filters.phone_number) {
+                whereClause += ' AND phone_number = ?';
+                queryParams.push(filters.phone_number);
+            }
+            if (filters.role) {
+                whereClause += ' AND role = ?';
+                queryParams.push(filters.role);
+            }
+
+            // Sắp xếp
+            const orderByClause = `ORDER BY id ${sort}`;
+
+            // Truy vấn chính
+            const query = `
+                SELECT 
+                    *
+                FROM users
+                ${whereClause}
+                ${orderByClause}
+                LIMIT ? OFFSET ?
+            `;
+
+            // Truy vấn đếm tổng số bản ghi
+            const countQuery = `
+                SELECT COUNT(*) as total
+                FROM users
+                ${whereClause}
+            `;
+
+            queryParams.push(pageSize, offset);
+
+            const [rows]: any = await pool.query(query, queryParams);
+            const [[totalCount]]: any = await pool.query(countQuery, queryParams.slice(0, -2));
+
+            return {
+                data: rows,
+                status: true,
+                message: 'success',
+                page: pageTemp,
+                total: totalCount.total,
+                totalPages: Math.ceil(totalCount.total / pageSize),
+            };
+        } catch (err: any) {
+            return { data: null, status: false, message: err.message || 'Failed to fetch users' };
         }
     }
 

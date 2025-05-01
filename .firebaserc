@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "landing-plan"
-  }
+    "default": "landing-plan",
+    "dev": "landing-plan"
+  },
+  "targets": {},
+  "etags": {}
 }

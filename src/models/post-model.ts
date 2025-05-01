@@ -1,6 +1,6 @@
 
-import pool from "../config/db"
 import moment from "moment";
+import pool from "../config/db";
 
 export enum Type_Post {
     Public = 1,
@@ -464,57 +464,62 @@ export class PostModel {
         }
     }
 
-    async getLikedPosts(user_id: number, page: number = 1, page_size: number = 10) {
+    async getLikedAndSharedPosts(user_id: number, page: number = 1, page_size: number = 10, filters: any = {}) {
         const offset = (page - 1) * page_size;
         try {
+            let queryParams: any = [user_id, user_id];
+            const whereClause = this.buildWhereClause(filters, queryParams);
+            const orderByClause = this.buildOrderByClause(filters.sort || 'DESC');
+
             const query = `
-                SELECT posts.* 
-                FROM posts 
-                INNER JOIN post_likes ON posts.id = post_likes.post_id 
-                WHERE post_likes.create_by_id = ? 
+                SELECT DISTINCT 
+                    p.*, 
+                    u.fullname AS create_by_name, 
+                    u.email AS create_by_email,
+                    u.avatar AS create_by_avatar,
+                    (SELECT COUNT(*) FROM post_likes WHERE post_likes.post_id = p.id) AS like_count,
+                    (SELECT COUNT(*) FROM post_sharing WHERE post_sharing.post_id = p.id) AS share_count
+                FROM posts p
+                LEFT JOIN users u ON p.create_by_id = u.id
+                LEFT JOIN post_likes pl ON p.id = pl.post_id
+                LEFT JOIN post_sharing ps ON p.id = ps.post_id
+                WHERE (pl.create_by_id = ? OR ps.create_by_id = ?)
+                ${whereClause}
+                ${orderByClause}
                 LIMIT ? OFFSET ?
             `;
 
-            const queryParams = [user_id, page_size, offset];
-
-            const [rows]: any = await pool.query(query, queryParams);
-
-            return {
-                data: rows,
-                status: true,
-                message: 'success',
-                page,
-                totalPages: Math.ceil(rows.length / page_size),
-            };
-        } catch (err) {
-            return { data: null, status: false, message: err };
-        }
-    }
-
-    async getSharingPosts(user_id: number, page: number = 1, page_size: number = 10) {
-        const offset = (page - 1) * page_size;
-        try {
-            const query = `
-                SELECT posts.* 
-                FROM posts 
-                INNER JOIN post_sharing ON posts.id = post_sharing.post_id 
-                WHERE post_sharing.create_by_id = ? 
-                LIMIT ? OFFSET ?
+            const countQuery = `
+                SELECT COUNT(DISTINCT p.id) as total
+                FROM posts p
+                LEFT JOIN post_likes pl ON p.id = pl.post_id
+                LEFT JOIN post_sharing ps ON p.id = ps.post_id
+                WHERE (pl.create_by_id = ? OR ps.create_by_id = ?)
+                ${whereClause}
             `;
 
-            const queryParams = [user_id, page_size, offset];
+            queryParams.push(page_size, offset);
 
             const [rows]: any = await pool.query(query, queryParams);
+            const [[totalCount]]: any = await pool.query(countQuery, queryParams.slice(0, -2));
 
             return {
-                data: rows,
+                data: rows.map((row: any) => ({
+                    ...row,
+                    like_count: row.like_count || 0,
+                    share_count: row.share_count || 0,
+                    name: row.create_by_name,
+                    email: row.create_by_email,
+                    avatar: row.create_by_avatar,
+                })),
                 status: true,
                 message: 'success',
                 page,
-                totalPages: Math.ceil(rows.length / page_size),
+                total: totalCount.total,
+                totalPages: Math.ceil(totalCount.total / page_size),
             };
-        } catch (err) {
-            return { data: null, status: false, message: err };
+        } catch (err: any) {
+            return { data: null, status: false, message: err.message || 'Failed to fetch liked and shared posts' };
         }
     }
 }

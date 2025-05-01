@@ -1,13 +1,17 @@
-import { access } from "fs";
-import { UserModel } from "../models";
-import { AuthController } from "./auth-controller";
 import bcrypt from "bcrypt";
+import { FollowModel, UserModel } from "../models";
+import { AuthController } from "./auth-controller";
 
 export class UserController {
     async index(req: any, res: any) {
+        const { page, page_size } = req.query
         const user = new UserModel();
-        const data = await user.getAll();
-        res.status(200).json(data);
+        try {
+            const data = await user.getAll(page, page_size, { ...req.query });
+            return res.status(200).json(data);
+        } catch (error) {
+            return res.status(400).json(error);
+        }
     }
 
     async getUserById(req: any, res: any) {
@@ -204,5 +208,125 @@ export class UserController {
                 }, status: true, message: "success"
             });
         })
+    }
+
+    async follow(req: any, res: any) {
+        const { user } = req;
+        const { id } = req.body;
+        try {
+            if (!user) {
+                return res.status(400).json({ message: 'authentication failed' });
+            }
+            if (!id) {
+                return res.status(400).json({ message: 'User not found' });
+            }
+            const follow = new FollowModel(user.id, id);
+            const data = await follow.follow();
+            if (!data) {
+                return res.status(500).json(
+                    {
+                        data: data, status: false, message: "errr"
+                    }
+                );
+            }
+            return res.status(200).json({
+                data: data, status: true, message: "success"
+            });
+        } catch (error) {
+            return res.status(400).json(error);
+        }
+    }
+
+    async unfollow(req: any, res: any) {
+        const { user } = req;
+        const { id } = req.params;
+        try {
+            if (!user) {
+                return res.status(400).json({ message: 'authentication failed' });
+            }
+            if (!id) {
+                return res.status(400).json({ message: 'User not found' });
+            }
+            const follow = new FollowModel(user.id, id);
+            const data = await follow.unfollow();
+            if (!data) {
+                return res.status(500).json(
+                    {
+                        data: data, status: false, message: "errr"
+                    }
+                );
+            }
+            return res.status(200).json({
+                data: data, status: true, message: "success"
+            });
+        } catch (error) {
+            return res.status(400).json(error);
+        }
+    }
+
+    async checkFollow(req: any, res: any) {
+        const { user } = req;
+        const { id } = req.query;
+        try {
+            if (!user) {
+                return res.status(400).json({ message: 'authentication failed' });
+            }
+            if (!id) {
+                return res.status(400).json({ message: 'User not found' });
+            }
+            const follow = new FollowModel(user.id, id);
+            const data = await follow.isFollowing();
+            return res.status(200).json({
+                data: data, status: true, message: "success"
+            });
+        } catch (error) {
+            return res.status(400).json(error);
+        }
+    }
+
+    async getListFollowers(req: any, res: any) {
+        const { user } = req;
+        try {
+            if (!user) {
+                return res.status(400).json({ message: 'authentication failed' });
+            }
+            const follow = new FollowModel();
+            const data = await follow.getFollowers(user.id);
+            if (!data) {
+                return res.status(500).json(
+                    {
+                        data: data, status: false, message: "errr"
+                    }
+                );
+            }
+            return res.status(200).json({
+                data: data, status: true, message: "success"
+            });
+        } catch (error) {
+            return res.status(400).json(error);
+        }
+    }
+
+    async getListFollowings(req: any, res: any) {
+        const { user } = req;
+        try {
+            if (!user) {
+                return res.status(400).json({ message: 'authentication failed' });
+            }
+            const follow = new FollowModel();
+            const data = await follow.getFollowings(user.id);
+            if (!data) {
+                return res.status(500).json(
+                    {
+                        data: data, status: false, message: "errr"
+                    }
+                );
+            }
+            return res.status(200).json({
+                data: data, status: true, message: "success"
+            });
+        } catch (error) {
+            return res.status(400).json(error);
+        }
     }
 }
