@@ -1,0 +1,7 @@
+{
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+    },
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "CodeGPT.apiKey": "CodeGPT Plus Beta"
+}
