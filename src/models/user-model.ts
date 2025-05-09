@@ -64,20 +64,29 @@ export class UserModel {
                 queryParams.push(filters.role);
             }
 
+            if (filters.excludeIds) {
+                const excludeIds = Array.isArray(filters.excludeIds) ? filters.excludeIds : filters.excludeIds.split(',').map((id: any) => Number(id));
+                if (excludeIds.length > 0) {
+                    whereClause += ' AND id NOT IN (' + excludeIds.map((id: number) => '?').join(',') + ')';
+                    queryParams.push(...excludeIds);
+                }
+            }
+
             // Sắp xếp
             const orderByClause = `ORDER BY id ${sort}`;
 
             // Truy vấn chính
             const query = `
                 SELECT 
-                    *
-                FROM users
+                    u.*,
+                    (SELECT GROUP_CONCAT(following_id) FROM follows WHERE follower_id = u.id) AS following_ids,
+                    (SELECT GROUP_CONCAT(follower_id) FROM follows WHERE following_id = u.id) AS follower_ids
+                FROM users u
                 ${whereClause}
                 ${orderByClause}
                 LIMIT ? OFFSET ?
             `;
 
-            // Truy vấn đếm tổng số bản ghi
             const countQuery = `
                 SELECT COUNT(*) as total
                 FROM users
@@ -90,7 +99,11 @@ export class UserModel {
             const [[totalCount]]: any = await pool.query(countQuery, queryParams.slice(0, -2));
 
             return {
-                data: rows,
+                data: rows.map((row: any) => ({
+                    ...row,
+                    following_ids: row.following_ids ? row.following_ids.split(',').map(Number) : [],
+                    follower_ids: row.follower_ids ? row.follower_ids.split(',').map(Number) : [],
+                })),
                 status: true,
                 message: 'success',
                 page: pageTemp,
