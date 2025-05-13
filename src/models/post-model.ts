@@ -141,7 +141,7 @@ export class PostModel {
             queryParams.push(filters.polygon);
         }
 
-        if (filters.lng !== undefined && filters.lat !== undefined) {
+        if (filters.lng && filters.lat) {
             const range = filters.range || 100;
             filterConditions.push(`ST_Distance_Sphere(POINT(p.lng, p.lat),POINT(?, ?)) <= ${range}`);
             queryParams.push(Number(filters.lng), Number(filters.lat));
@@ -346,9 +346,9 @@ export class PostModel {
             const orderByClause = this.buildOrderByClause(filters.sort);
 
             const query = `
-                SELECT 
-                    p.*, 
-                    u.fullname AS create_by_name, 
+                SELECT
+                    p.*,
+                    u.fullname AS create_by_name,
                     u.email AS create_by_email,
                     u.phone_number AS create_by_phone,
                     u.avatar AS create_by_avatar,
@@ -369,7 +369,7 @@ export class PostModel {
             return {
                 data: rows.map((row: any) => ({
                     ...row,
-                    coordinates: row.coordinates ? (row.coordinates[0] as { x: number; y: number }[]).map((coord: { x: number; y: number }) => `${coord.x} ${coord.y}`) : [],
+                    coordinates: row.coordinates ? (row.coordinates[0] as { x: number; y: number }[]).map((coord: { x: number; y: number }) => [coord.x, coord.y]) : [],
                     like_by_ids: row.like_by_ids ? row.like_by_ids.split(',').map(Number) : [],
                     share_count: row.share_count || 0,
                 })),
@@ -388,9 +388,9 @@ export class PostModel {
     async getDetailPost(post_id?: number) {
         try {
             const query = `
-                SELECT 
-                    p.*, 
-                    u.fullname AS create_by_name, 
+                SELECT
+                    p.*,
+                    u.fullname AS create_by_name,
                     u.email AS create_by_email,
                     u.phone_number AS create_by_phone,
                     u.avatar AS create_by_avatar,
@@ -472,9 +472,9 @@ export class PostModel {
             const orderByClause = this.buildOrderByClause(filters.sort || 'DESC');
 
             const query = `
-                SELECT DISTINCT 
-                    p.*, 
-                    u.fullname AS create_by_name, 
+                SELECT DISTINCT
+                    p.*,
+                    u.fullname AS create_by_name,
                     u.email AS create_by_email,
                     u.avatar AS create_by_avatar,
                     (SELECT COUNT(*) FROM post_likes WHERE post_likes.post_id = p.id) AS like_count,
