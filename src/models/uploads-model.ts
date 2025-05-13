@@ -22,13 +22,24 @@ export class UploadModel {
     }
 
     async getListMediaByUserID(id?: number, type?: string) {
-        return await pool.query('SELECT * FROM uploads WHERE user_id = ? AND type = ?', [id, type])
+        const query = `
+            SELECT 
+                u.fullname AS created_by_name,
+                uploads.*
+            FROM uploads
+            JOIN users u ON u.id = uploads.user_id
+            WHERE uploads.user_id = ?
+            ${type ? 'AND uploads.type = ?' : ''}
+        `;
+        const queryParams = type ? [id, type] : [id];
+
+        return await pool.query(query, queryParams)
             .then((res: any) => {
-                return { data: [...res[0]], status: true, message: 'success' }
+                return { data: [...res[0]], status: true, message: 'success' };
             })
             .catch(err => {
-                return { data: null, status: false, message: err }
-            })
+                return { data: null, status: false, message: err.message || 'Failed to fetch media' };
+            });
     }
 
     async delete(id?: number) {

@@ -252,12 +252,12 @@ export class UserController {
             if (!data) {
                 return res.status(500).json(
                     {
-                        data: data, status: false, message: "errr"
+                        data: true, status: false, message: "errr"
                     }
                 );
             }
             return res.status(200).json({
-                data: data, status: true, message: "success"
+                data: false, status: true, message: "success"
             });
         } catch (error) {
             return res.status(400).json(error);
@@ -286,12 +286,13 @@ export class UserController {
 
     async getListFollowers(req: any, res: any) {
         const { user } = req;
+        const { user_id } = req.query;
         try {
             if (!user) {
                 return res.status(400).json({ message: 'authentication failed' });
             }
             const follow = new FollowModel();
-            const data = await follow.getFollowers(user.id);
+            const data = await follow.getFollowers(user_id ? user_id : user.id);
             if (!data) {
                 return res.status(500).json(
                     {
@@ -309,12 +310,13 @@ export class UserController {
 
     async getListFollowings(req: any, res: any) {
         const { user } = req;
+        const { user_id } = req.query;
         try {
             if (!user) {
                 return res.status(400).json({ message: 'authentication failed' });
             }
             const follow = new FollowModel();
-            const data = await follow.getFollowings(user.id);
+            const data = await follow.getFollowings(user_id ? user_id : user.id);
             if (!data) {
                 return res.status(500).json(
                     {

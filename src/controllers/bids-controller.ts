@@ -84,7 +84,6 @@ export class BidsController {
             notification.message = `${userInfo.data.fullname} đã đặt giá mới trên bài đấu giá của bạn.`;
             await notification.create()
                 .then((res) => {
-                    console.log(res);
                     socketService.emitToUser(postData.data.create_by_id, 'bid_create', {
                         ...notification
                     });

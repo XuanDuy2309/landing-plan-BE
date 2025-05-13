@@ -8,4 +8,3 @@ AuthRouter.post('/upload', authMiddleware, upload.array('files'), authController
 AuthRouter.get('/list_upload', authMiddleware, authController.getListMedia);
 AuthRouter.get('/list_upload/:id', authController.getListMediaByID);
 AuthRouter.delete('/delete/:id', authMiddleware, authController.delete);
-AuthRouter.get('/list_video', authMiddleware, authController.getListMedia);

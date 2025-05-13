@@ -1,6 +1,6 @@
 
 import jwt from 'jsonwebtoken';
-import { Role, UserModel } from '../models';
+import { UserModel } from '../models';
 import { UploadModel } from '../models/uploads-model';
 
 export class AuthController {

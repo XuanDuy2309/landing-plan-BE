@@ -147,17 +147,15 @@ export class PostModel {
             queryParams.push(Number(filters.lng), Number(filters.lat));
         }
 
-        return filterConditions.length > 0 ? ` WHERE ${filterConditions.join(' AND ')}` : '';
+        // Only add WHERE if there are conditions
+        return filterConditions.length > 0 ? `WHERE ${filterConditions.join(' AND ')}` : '';
     }
 
     private buildOrderByClause(sort: string): string {
-        // Giả định: sort = "newest" hoặc "oldest"
         if (sort === 'ASC') {
-            return ` ORDER BY id ASC`;
+            return `ORDER BY id ASC`;
         }
-
-        // Mặc định: newest
-        return ` ORDER BY id DESC`;
+        return `ORDER BY id DESC`; // Default to DESC
     }
 
     private buildCreateQuery() {
@@ -197,7 +195,7 @@ export class PostModel {
         if (this.direction_land) {
             fields.push(`direction_land`);
             values.push(`?`);
-            params.push(this.status);
+            params.push(this.direction_land);
         }
         if (this.area) {
             fields.push(`area`);
@@ -370,6 +368,8 @@ export class PostModel {
                 data: rows.map((row: any) => ({
                     ...row,
                     coordinates: row.coordinates ? (row.coordinates[0] as { x: number; y: number }[]).map((coord: { x: number; y: number }) => [coord.x, coord.y]) : [],
+                    image_links: row.image_links ? JSON.parse(row.image_links) : [],
+                    video_links: row.video_links ? JSON.parse(row.video_links) : [],
                     like_by_ids: row.like_by_ids ? row.like_by_ids.split(',').map(Number) : [],
                     share_count: row.share_count || 0,
                 })),
@@ -405,6 +405,8 @@ export class PostModel {
                 return { data: null, status: false, message: "Post not found" };
             }
             const post = rows[0];
+            post.image_links = post.image_links ? JSON.parse(post.image_links) : [];
+            post.video_links = post.video_links ? JSON.parse(post.video_links) : [];
             post.coordinates = post.coordinates ? (post.coordinates[0] as { x: number; y: number }[]).map((coord: { x: number; y: number }) => `${coord.x} ${coord.y}`) : []
             post.like_by_ids = post.like_by_ids ? post.like_by_ids.split(',').map(Number) : [];
             post.share_count = post.share_count || 0;
@@ -465,8 +467,12 @@ export class PostModel {
     }
 
     async getLikedAndSharedPosts(user_id: number, page: number = 1, page_size: number = 10, filters: any = {}) {
-        const offset = (page - 1) * page_size;
+        const pageTemp = Number(page);
+        const pageSize = Number(page_size);
+        const offset = (pageTemp - 1) * pageSize;
+
         try {
+            user_id = Number(user_id);
             let queryParams: any = [user_id, user_id];
             const whereClause = this.buildWhereClause(filters, queryParams);
             const orderByClause = this.buildOrderByClause(filters.sort || 'DESC');
@@ -477,48 +483,58 @@ export class PostModel {
                     u.fullname AS create_by_name,
                     u.email AS create_by_email,
                     u.avatar AS create_by_avatar,
-                    (SELECT COUNT(*) FROM post_likes WHERE post_likes.post_id = p.id) AS like_count,
-                    (SELECT COUNT(*) FROM post_sharing WHERE post_sharing.post_id = p.id) AS share_count
+                    (SELECT GROUP_CONCAT(lp.create_by_id) FROM post_likes lp WHERE lp.post_id = p.id) AS like_by_ids,
+                    (SELECT GROUP_CONCAT(ps.create_by_id) FROM post_sharing ps WHERE ps.post_id = p.id) AS share_by_ids
                 FROM posts p
                 LEFT JOIN users u ON p.create_by_id = u.id
-                LEFT JOIN post_likes pl ON p.id = pl.post_id
-                LEFT JOIN post_sharing ps ON p.id = ps.post_id
-                WHERE (pl.create_by_id = ? OR ps.create_by_id = ?)
+                JOIN (
+                    SELECT post_id FROM post_likes WHERE create_by_id = ?
+                    UNION
+                    SELECT post_id FROM post_sharing WHERE create_by_id = ?
+                ) AS liked_or_shared ON p.id = liked_or_shared.post_id
                 ${whereClause}
                 ${orderByClause}
                 LIMIT ? OFFSET ?
             `;
 
             const countQuery = `
-                SELECT COUNT(DISTINCT p.id) as total
-                FROM posts p
-                LEFT JOIN post_likes pl ON p.id = pl.post_id
-                LEFT JOIN post_sharing ps ON p.id = ps.post_id
-                WHERE (pl.create_by_id = ? OR ps.create_by_id = ?)
-                ${whereClause}
+                SELECT COUNT(*) as total
+                FROM (
+                    SELECT DISTINCT p.id
+                    FROM posts p
+                    JOIN (
+                        SELECT post_id FROM post_likes WHERE create_by_id = ?
+                        UNION
+                        SELECT post_id FROM post_sharing WHERE create_by_id = ?
+                    ) AS liked_or_shared ON p.id = liked_or_shared.post_id
+                    ${whereClause}
+                ) AS sub
             `;
 
-            queryParams.push(page_size, offset);
+            queryParams.push(pageSize, offset);
 
             const [rows]: any = await pool.query(query, queryParams);
-            const [[totalCount]]: any = await pool.query(countQuery, queryParams.slice(0, -2));
+            const [[totalCount]]: any = await pool.query(countQuery, [user_id, user_id, ...queryParams.slice(2, -2)]);
 
             return {
                 data: rows.map((row: any) => ({
                     ...row,
-                    like_count: row.like_count || 0,
-                    share_count: row.share_count || 0,
+                    video_links: row.video_links ? JSON.parse(row.video_links) : [],
+                    image_links: row.image_links ? JSON.parse(row.image_links) : [],
+                    like_by_ids: row.like_by_ids ? row.like_by_ids.split(',').map(Number) : [],
+                    share_by_ids: row.share_by_ids ? row.share_by_ids.split(',').map(Number) : [],
                     name: row.create_by_name,
                     email: row.create_by_email,
                     avatar: row.create_by_avatar,
                 })),
                 status: true,
                 message: 'success',
-                page,
+                page: pageTemp,
                 total: totalCount.total,
-                totalPages: Math.ceil(totalCount.total / page_size),
+                totalPages: Math.ceil(totalCount.total / pageSize),
             };
         } catch (err: any) {
+            console.error('SQL Error:', err.message);
             return { data: null, status: false, message: err.message || 'Failed to fetch liked and shared posts' };
         }
     }

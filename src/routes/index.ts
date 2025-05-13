@@ -1,16 +1,17 @@
-import { AuthRouter } from "./auth";
-import { SiteRouter } from "./site";
-import { UserRouter } from "./user";
 import express from "express";
 import path from "path";
-import CoordinateLocationRoute from "./coordinate-location";
-import { ProvinceRouter } from "./province";
-import { DistrictRouter } from "./district";
-import { WardRouter } from "./ward";
-import LandingPlanRoute from "./landing-plan";
-import { PostRouter } from "./post";
+import { AuthRouter } from "./auth";
 import { BidsRouter } from "./bids";
+import ConversationRouter from "./conversation";
+import CoordinateLocationRoute from "./coordinate-location";
+import { DistrictRouter } from "./district";
+import LandingPlanRoute from "./landing-plan";
 import { NotificationRouter } from "./notification";
+import { PostRouter } from "./post";
+import { ProvinceRouter } from "./province";
+import { SiteRouter } from "./site";
+import { UserRouter } from "./user";
+import { WardRouter } from "./ward";
 
 export const Route = (app: any) => {
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -26,4 +27,5 @@ export const Route = (app: any) => {
   app.use('/post', PostRouter);
   app.use('/bids', BidsRouter);
   app.use('/notification', NotificationRouter);
+  app.use('/conversations', ConversationRouter);
 };
