@@ -117,23 +117,22 @@ export class UserModel {
 
     async findUserById(id?: number) {
         try {
-            const [rows]: any = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
-            this.id = rows[0].id
-            this.username = rows[0].username
-            this.fullname = rows[0].fullname
-            this.phone_number = rows[0].phone_number
-            this.address = rows[0].address
-            this.dob = rows[0].dob
-            this.gender = rows[0].gender
-            this.email = rows[0].email
-            this.avatar = rows[0].avatar
-            this.background = rows[0].background
-            this.role = rows[0].role
-            this.status = rows[0].status
-            this.password = rows[0].password
-            this.created_at = rows[0].created_at
+            const [rows]: any = await pool.query(`
+    SELECT 
+        u.*, 
+        (SELECT GROUP_CONCAT(following_id) FROM follows WHERE follower_id = u.id) AS following_ids,
+        (SELECT GROUP_CONCAT(follower_id) FROM follows WHERE following_id = u.id) AS follower_ids
+    FROM users u 
+    WHERE u.id = ?
+`, [id]);
+
+
             return {
-                data: this, status: true, message: "success"
+                data: {
+                    ...rows[0],
+                    following_ids: rows[0].following_ids ? rows[0].following_ids.split(',').map(Number) : [],
+                    follower_ids: rows[0].follower_ids ? rows[0].follower_ids.split(',').map(Number) : [],
+                }, status: true, message: "success"
             };
         } catch (err) {
             return { data: null, status: false, message: err }

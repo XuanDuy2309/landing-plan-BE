@@ -1,19 +1,25 @@
-import { Router } from "express";
-import { ConversationsController } from "../controllers";
-import { authMiddleware } from "../middleware";
+import { Router } from 'express';
+import { ConversationsController } from '../controllers';
+import { authMiddleware } from '../middleware';
 
-const ConversationRouter = Router();
-const conversationsController = new ConversationsController();
+const router = Router();
+const controller = new ConversationsController();
 
-ConversationRouter.get("/", authMiddleware, conversationsController.index);
-ConversationRouter.get("/:id", authMiddleware, conversationsController.store);
-ConversationRouter.get("/:id/messages", authMiddleware, conversationsController.getMessagesInConversation);
-ConversationRouter.post("/", authMiddleware, conversationsController.create);
-ConversationRouter.post("/:id/messages", authMiddleware, conversationsController.sendMessagesInConversation);
-ConversationRouter.put("/:id/members", authMiddleware, conversationsController.updateMember);
-ConversationRouter.put("/:id/name", authMiddleware, conversationsController.updateNameGroupConversation);
-ConversationRouter.delete("/:id", authMiddleware, conversationsController.leaveConversation);
-ConversationRouter.delete("/:id/members/:user_id", authMiddleware, conversationsController.deleteMemberInGroupConversation);
-ConversationRouter.delete("/:id/messages/:user_id", authMiddleware, conversationsController.deleteMessagesInConversation);
+// Basic conversation routes
+router.get('/', authMiddleware, controller.getConversations.bind(controller));
+router.get('/:conversationId', authMiddleware, controller.getDetailConversation.bind(controller));
+router.post('/', authMiddleware, controller.createConversation.bind(controller));
+router.post('/:conversationId/members', authMiddleware, controller.addMembersToGroup.bind(controller));
 
-export default ConversationRouter;
+// Message routes
+router.get('/:conversationId/messages', authMiddleware, controller.getMessages.bind(controller));
+router.post('/:conversationId/messages', authMiddleware, controller.sendMessage.bind(controller));
+router.put('/:conversationId/messages/:messageId', authMiddleware, controller.editMessage.bind(controller));
+router.delete('/:conversationId/messages/:messageId', authMiddleware, controller.deleteMessage.bind(controller));
+
+// Mention routes
+router.get('/mentions', authMiddleware, controller.getMentionedMessages.bind(controller));
+router.get('/:conversationId/mentions', authMiddleware, controller.getMentionedMessages.bind(controller));
+router.get('/:conversationId/mentions/users', authMiddleware, controller.searchMentionUsers.bind(controller));
+
+export default router;

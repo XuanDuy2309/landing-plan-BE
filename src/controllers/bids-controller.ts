@@ -70,12 +70,13 @@ export class BidsController {
 
             await Promise.all(notifications);
 
-            socketService.emitToRoomExcept(`post_${postId}`, 'bid_create', {
+            // Emit to room using the new method
+            socketService.emitToAll('bid_create', {
                 post_id: postId,
                 user_id: user.id,
                 price: bidPrice,
                 message: `${userInfo.data.fullname} đã đặt giá mới.`,
-            }, user.id);
+            });
 
             notification.type = NotificationType.SET_BID;
             notification.post_id = postId;
