@@ -62,7 +62,7 @@ export class ConversationsController {
         try {
             const { user } = req;
             const { page = 1, page_size = 20, query } = req.query;
-            
+
             const member = new ConversationMemberModel();
             const result = await member.getConversationsByUserId(
                 user.id,
@@ -110,26 +110,8 @@ export class ConversationsController {
     async sendMessage(req: any, res: any) {
         try {
             const { conversationId } = req.params;
-            const { content, type = MessageType.TEXT, replyId, mentions = [] } = req.body;
+            const { content, type = MessageType.TEXT, replyId } = req.body;
             const { user } = req;
-
-            // Validate mentions format
-            if (mentions.length > 0) {
-                const isValidMentions = mentions.every((mention: any) => 
-                    typeof mention === 'object' && 
-                    Number.isInteger(mention.userId) &&
-                    typeof mention.position === 'object' &&
-                    typeof mention.position.start === 'number' &&
-                    typeof mention.position.end === 'number'
-                );
-
-                if (!isValidMentions) {
-                    return res.status(400).json({
-                        status: false,
-                        message: 'Invalid mentions format'
-                    });
-                }
-            }
 
             // Check if user is member of conversation
             const member = new ConversationMemberModel();
@@ -149,7 +131,6 @@ export class ConversationsController {
             message.content = content;
             message.type = type;
             message.reply_id = replyId;
-            message.metadata = mentions.length > 0 ? { mentions } : undefined;
 
             const result = await message.create();
 
@@ -161,36 +142,16 @@ export class ConversationsController {
             const conversation = new ConversationsModel();
             await conversation.updateLastMessage(parseInt(conversationId));
 
-            // Get conversation members
-            const members = await member.getMembersByConversationId(parseInt(conversationId));
-
             // Emit message to conversation room
             const messageData = {
                 ...result.data,
                 sender_name: user.full_name,
                 sender_avatar: user.avatar
             };
-            
-            socketService.emitToConversation(conversationId, 'new_message', messageData, user.id);
 
-            // Send mention notifications to mentioned users
-            if (mentions.length > 0) {
-                const mentionData = {
-                    messageId: result.data.id,
-                    conversationId,
-                    mentionedBy: {
-                        id: user.id,
-                        name: user.full_name,
-                        avatar: user.avatar
-                    },
-                    content
-                };
+            socketService.emitToConversation(conversationId, 'new_message', messageData);
 
-                mentions.forEach((mentionedUserId: number) => {
-                    socketService.emitToUser(mentionedUserId, 'mentioned', mentionData);
-                    this.processMentionNotification(result.data.id, mentionedUserId, parseInt(conversationId));
-                });
-            }
+            // Send mention notifications to mentioned use
 
             return res.status(200).json(result);
         } catch (error: any) {
@@ -201,12 +162,11 @@ export class ConversationsController {
     async editMessage(req: any, res: any) {
         try {
             const { conversationId, messageId } = req.params;
-            const { content, type = MessageType.TEXT, mentions = [] } = req.body;
+            const { content, type = MessageType.TEXT } = req.body;
             const { user } = req;
 
             const message = new MessageModel();
-            const metadata = mentions.length > 0 ? { mentions } : undefined;
-            const messageData = await message.edit(parseInt(messageId), content, type, metadata);
+            const messageData = await message.edit(parseInt(messageId), content, type);
 
             if (!messageData.status) {
                 return res.status(400).json(messageData);
@@ -250,32 +210,6 @@ export class ConversationsController {
         }
     }
 
-    async toggleFavoriteMessage(req: any, res: any) {
-        try {
-            const { messageId } = req.params;
-            const message = new MessageModel();
-            const result = await message.toggleFavorite(parseInt(messageId));
-
-            return res.status(200).json(result);
-        } catch (error: any) {
-            return res.status(500).json({ message: error.message });
-        }
-    }
-
-    async getFavoriteMessages(req: any, res: any) {
-        try {
-            const { conversationId } = req.params;
-            const { user } = req;
-
-            const message = new MessageModel();
-            const result = await message.getFavoriteMessages(parseInt(conversationId), user.id);
-
-            return res.status(200).json(result);
-        } catch (error: any) {
-            return res.status(500).json({ message: error.message });
-        }
-    }
-
     async searchMessages(req: any, res: any) {
         try {
             const { conversationId } = req.params;
@@ -303,10 +237,6 @@ export class ConversationsController {
             message.sender_id = user.id;
             message.type = type;
             message.content = `${type === MessageType.AUDIO_CALL ? 'Audio' : 'Video'} call`;
-            message.metadata = {
-                callId: `${conversationId}-${Date.now()}`,
-                status: 'initiated'
-            };
 
             const result = await message.create();
 
@@ -322,54 +252,6 @@ export class ConversationsController {
             }, user.id);
 
             return res.status(200).json(result);
-        } catch (error: any) {
-            return res.status(500).json({ message: error.message });
-        }
-    }
-
-    async getMentionedMessages(req: any, res: any) {
-        try {
-            const { conversationId } = req.params;
-            const { user } = req;
-            
-            const message = new MessageModel();
-            const result = await message.getMentionedMessages(
-                user.id, 
-                conversationId ? parseInt(conversationId) : undefined
-            );
-
-            return res.status(200).json(result);
-        } catch (error: any) {
-            return res.status(500).json({ message: error.message });
-        }
-    }
-
-    async searchMentionUsers(req: any, res: any) {
-        try {
-            const { conversationId } = req.params;
-            const { query = '' } = req.query;
-            const { user } = req;
-
-            // Tìm kiếm trong thành viên của cuộc trò chuyện
-            const [users]: any = await pool.query(
-                `SELECT DISTINCT u.id, u.fullname, u.avatar, u.email
-                FROM users u
-                JOIN conversation_members cm ON u.id = cm.user_id
-                WHERE cm.conversation_id = ?
-                AND u.id != ?
-                AND (
-                    u.fullname LIKE ? 
-                    OR u.email LIKE ?
-                )
-                LIMIT 10`,
-                [conversationId, user.id, `%${query}%`, `%${query}%`]
-            );
-
-            return res.status(200).json({
-                status: true,
-                data: users,
-                message: 'Users found successfully'
-            });
         } catch (error: any) {
             return res.status(500).json({ message: error.message });
         }
@@ -391,7 +273,7 @@ export class ConversationsController {
             // Kiểm tra xem người dùng hiện tại có phải là admin của nhóm không
             const member = new ConversationMemberModel();
             const memberData = await member.getMemberRole(parseInt(conversationId), user.id);
-            
+
             if (!memberData.data || memberData.data.role !== MemberRole.ADMIN) {
                 return res.status(403).json({
                     status: false,
@@ -402,7 +284,7 @@ export class ConversationsController {
             // Kiểm tra xem có phải là group conversation không
             const conversation = new ConversationsModel();
             const conversationData = await conversation.getById(parseInt(conversationId));
-            
+
             if (!conversationData.data || conversationData.data.type !== ConversationType.GROUP) {
                 return res.status(400).json({
                     status: false,
@@ -412,7 +294,7 @@ export class ConversationsController {
 
             // Thêm các thành viên mới
             const addedMembers = await this.addMembersToConversation(parseInt(conversationId), memberIds);
-            
+
             // Lấy thông tin chi tiết của các thành viên mới
             const newMembersData = await member.getMembersByConversationId(parseInt(conversationId));
             if (!newMembersData.status || !newMembersData.data) {
@@ -483,6 +365,116 @@ export class ConversationsController {
         }
     }
 
+    async updateConversationSettings(req: any, res: any) {
+        try {
+            const { conversationId } = req.params;
+            const { muteDuration } = req.body;
+            const { user } = req;
+
+            const member = new ConversationMemberModel();
+
+            // Kiểm tra xem người dùng có trong cuộc trò chuyện không
+            const isMember = await member.isMember(parseInt(conversationId), user.id);
+            if (!isMember.data) {
+                return res.status(403).json({
+                    status: false,
+                    message: 'You are not a member of this conversation'
+                });
+            }
+
+            // Cập nhật cài đặt tắt thông báo
+            const result = await member.updateMuteSetting(parseInt(conversationId), user.id, muteDuration);
+
+            return res.status(200).json(result);
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async removeMemberFromGroup(req: any, res: any) {
+        try {
+            const { conversationId, memberId } = req.params;
+            const { user } = req;
+
+            const member = new ConversationMemberModel();
+
+            // Kiểm tra quyền admin
+            const isAdmin = await member.isAdmin(parseInt(conversationId), user.id);
+            if (!isAdmin.data) {
+                return res.status(403).json({
+                    status: false,
+                    message: 'Only admin can remove members'
+                });
+            }
+
+            const result = await member.removeMember(parseInt(conversationId), parseInt(memberId));
+            if (result.status) {
+                // Thông báo cho các thành viên khác
+                socketService.emitToConversation(conversationId, 'member_removed', {
+                    conversationId: parseInt(conversationId),
+                    removedBy: {
+                        id: user.id,
+                        name: user.fullname,
+                        avatar: user.avatar
+                    },
+                    removedMemberId: parseInt(memberId)
+                });
+
+                // Thông báo cho thành viên bị xóa
+                socketService.emitToUser(memberId, 'removed_from_conversation', {
+                    conversationId: parseInt(conversationId),
+                    removedBy: {
+                        id: user.id,
+                        name: user.fullname,
+                        avatar: user.avatar
+                    }
+                });
+            }
+
+            return res.status(200).json(result);
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async updateMemberRole(req: any, res: any) {
+        try {
+            const { conversationId, memberId } = req.params;
+            const { role } = req.body;
+            const { user } = req;
+
+            const member = new ConversationMemberModel();
+
+            // Kiểm tra quyền admin
+            const isAdmin = await member.isAdmin(parseInt(conversationId), user.id);
+            if (!isAdmin.data) {
+                return res.status(403).json({
+                    status: false,
+                    message: 'Only admin can update member roles'
+                });
+            }
+
+            const result = await member.updateRole(parseInt(conversationId), parseInt(memberId), role);
+            if (result.status) {
+                // Thông báo cho các thành viên
+                socketService.emitToConversation(conversationId, 'member_role_updated', {
+                    conversationId: parseInt(conversationId),
+                    updatedBy: {
+                        id: user.id,
+                        name: user.fullname,
+                        avatar: user.avatar
+                    },
+                    memberId: parseInt(memberId),
+                    newRole: role
+                });
+            }
+
+            return res.status(200).json(result);
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
     async processMentionNotification(messageId: number, mentionedUserId: number, conversationId: number) {
         try {
             // Lấy thông tin tin nhắn và người gửi
@@ -526,7 +518,85 @@ export class ConversationsController {
         }
     }
 
-    // Removed: findDirectChat moved to ConversationsModel
+    async updateLastSeen(req: any, res: any) {
+        try {
+            const { conversationId } = req.params;
+            const { user } = req;
+
+            // Check if user is member of conversation
+            const member = new ConversationMemberModel();
+            const isMember = await member.isMember(parseInt(conversationId), user.id);
+
+            if (!isMember.data) {
+                return res.status(403).json({
+                    status: false,
+                    message: 'You are not a member of this conversation'
+                });
+            }
+
+            // Update last seen timestamp
+            const result = await member.updateLastSeen(parseInt(conversationId), user.id);
+            return res.status(200).json(result);
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async getMentionedMessages(req: any, res: any) {
+        try {
+            const { conversationId } = req.params;
+            const { page = 1, limit = 20 } = req.query;
+            const { user } = req;
+
+            // Check if user is member of conversation
+            const member = new ConversationMemberModel();
+            const isMember = await member.isMember(parseInt(conversationId), user.id);
+
+            if (!isMember.data) {
+                return res.status(403).json({
+                    status: false,
+                    message: 'You are not a member of this conversation'
+                });
+            }
+
+            const message = new MessageModel();
+            const result = await message.getMentionedMessages(
+                parseInt(conversationId),
+                user.id,
+                parseInt(page),
+                parseInt(limit)
+            );
+
+            return res.status(200).json(result);
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async getListMentionUsers(req: any, res: any) {
+        try {
+            const { conversationId } = req.params;
+            const { user } = req;
+            const { page = 1, page_size = 20, query } = req.query;
+
+            // Check if user is member of conversation
+            const member = new ConversationMemberModel();
+            const isMember = await member.isMember(parseInt(conversationId), user.id);
+
+            if (!isMember.data) {
+                return res.status(403).json({
+                    status: false,
+                    message: 'You are not a member of this conversation'
+                });
+            }
+
+            // Search for members to mention
+            const result = await member.getListMembers(parseInt(conversationId), parseInt(page), parseInt(page_size), query);
+            return res.status(200).json(result);
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
 
     private async addMembersToConversation(conversationId: number, memberIds: number[], creatorId?: number) {
         const memberModel = new ConversationMemberModel();

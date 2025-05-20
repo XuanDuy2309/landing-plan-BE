@@ -432,7 +432,7 @@ export class PostModel {
 
             const query = `INSERT INTO posts (${fields.join(", ")}) VALUES (${values.join(", ")})`;
             const [rows]: any = await pool.query(query, params);
-            return { data: rows.insertId, status: true, message: "Post created successfully" };
+            return { data: { ...this, id: rows.insertId }, status: true, message: "Post created successfully" };
         } catch (err: any) {
             return { data: null, status: false, message: err.message || "Failed to create post" };
         }

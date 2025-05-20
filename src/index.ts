@@ -1,10 +1,9 @@
-import express, { Request, Response } from 'express';
-import { Route } from './routes';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import path from 'path';
+import express from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
+import path from 'path';
+import { Route } from './routes';
 import { socketService } from './service';
 
 dotenv.config();
@@ -17,10 +16,19 @@ socketService.init(httpServer); // Khởi tạo socket với HTTP server
 const PORT = 3000;
 
 app.use(express.json());
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true,
-}));
+
+const allowedOrigins = ['http://localhost:5173', 'https://landing-plan-fe.vercel.app'];
+
+const corsOptions = {
+  origin: (origin: any, callback: any) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+};
+app.use(cors(corsOptions));
 
 const TILE_FOLDER = path.join(__dirname, "../dong-anh-2030");
 
