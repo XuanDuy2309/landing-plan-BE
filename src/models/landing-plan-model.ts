@@ -10,6 +10,8 @@ export class LandingPlanModel {
     district_id?: number;
     ward_id?: number;
     created_at?: string;
+    lat?: number;
+    lng?: number;
 
     constructor() {
 
@@ -64,9 +66,11 @@ export class LandingPlanModel {
             this.district_id = row.district_id;
             this.ward_id = row.ward_id;
             this.created_at = row.created_at;
+            this.lat = lat;
+            this.lng = lon;
 
             return {
-                data: this,
+                data: [this],
                 status: true,
                 message: "success"
             };
@@ -89,12 +93,14 @@ export class LandingPlanModel {
             province_id,
             district_id,
             ward_id,
-            created_at
+            created_at,
+            lat,
+            lng
           FROM planning_maps
           WHERE ST_Intersects(
             bounds,
             ST_Buffer(
-              ST_SRID(ST_GeomFromText(?), 4326),
+              ST_GeomFromText(?, 4326),
               ?
             )
           )
@@ -122,15 +128,39 @@ export class LandingPlanModel {
                     district_id: row.district_id,
                     ward_id: row.ward_id,
                     created_at: row.created_at,
+                    lat: row.lat,
+                    lng: row.lng
                 };
             });
 
+            function pointInPolygon(point: number[], vs: number[][]) {
+                let x = point[0], y = point[1];
+                let inside = false;
+                for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+                    let xi = vs[i][0], yi = vs[i][1];
+                    let xj = vs[j][0], yj = vs[j][1];
+                    let intersect = ((yi > y) !== (yj > y)) &&
+                        (x < (xj - xi) * (y - yi) / (yj - yi + 0.0000001) + xi);
+                    if (intersect) inside = !inside;
+                }
+                return inside;
+            }
+
+            // Sắp xếp: item nào chứa điểm sẽ lên đầu
+            const sortedResults = results.sort((a: any, b: any) => {
+                const aContains = pointInPolygon([lat, lon], a.bounds) ? 1 : 0;
+                const bContains = pointInPolygon([lat, lon], b.bounds) ? 1 : 0;
+                return bContains - aContains;
+            });
+
             return {
-                data: results,
+                data: sortedResults,
                 status: true,
                 message: "success",
             };
+
         } catch (error) {
+            console.error(error)
             throw new Error(`Error executing listMapInRange: ${error}`);
         }
     }
