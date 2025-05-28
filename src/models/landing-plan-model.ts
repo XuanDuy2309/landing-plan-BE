@@ -9,15 +9,15 @@ export class LandingPlanModel {
     province_id?: number;
     district_id?: number;
     ward_id?: number;
-    created_at?: string;  
-    
+    created_at?: string;
+
     constructor() {
 
     }
 
     async findMapByLatLon(lat: number, lon: number) {
         const query = `
-          SELECT 
+          SELECT
             id,
             name,
             description,
@@ -31,48 +31,107 @@ export class LandingPlanModel {
           WHERE ST_Contains(bounds, ST_GeomFromText(?))
           LIMIT 1
         `;
-    
+
         const pointWKT = `POINT(${lon} ${lat})`;
-    
+
         try {
-          const [rows]: any = await pool.query(query, [pointWKT]);
-    
-          if (rows.length === 0) {
+            const [rows]: any = await pool.query(query, [pointWKT]);
+
+            if (rows.length === 0) {
+                return {
+                    data: null,
+                    status: false,
+                    message: "Không tìm thấy bản đồ quy hoạch cho vị trí này."
+                };
+            }
+
+            const row = rows[0];
+
+            // Xử lý bounds (POLYGON) từ WKT sang array [lat, lon][]
+            const polygonText = row.bounds.replace("POLYGON((", "").replace("))", "");
+            const pointsArray: number[][] = polygonText.split(",").map((point: string) => {
+                const [lng, lat] = point.trim().split(" ").map(Number);
+                return [lat, lng]; // đảo thứ tự thành [lat, lon]
+            });
+
+            // Gán dữ liệu vào instance
+            this.id = row.id;
+            this.name = row.name;
+            this.description = row.description;
+            this.folder_path = row.folder_path;
+            this.bounds = pointsArray;
+            this.province_id = row.province_id;
+            this.district_id = row.district_id;
+            this.ward_id = row.ward_id;
+            this.created_at = row.created_at;
+
             return {
-              data: null,
-              status: false,
-              message: "Không tìm thấy bản đồ quy hoạch cho vị trí này."
+                data: this,
+                status: true,
+                message: "success"
             };
-          }
-    
-          const row = rows[0];
-    
-          // Xử lý bounds (POLYGON) từ WKT sang array [lat, lon][]
-          const polygonText = row.bounds.replace("POLYGON((", "").replace("))", "");
-          const pointsArray: number[][] = polygonText.split(",").map((point: string) => {
-            const [lng, lat] = point.trim().split(" ").map(Number);
-            return [lat, lng]; // đảo thứ tự thành [lat, lon]
-          });
-    
-          // Gán dữ liệu vào instance
-          this.id = row.id;
-          this.name = row.name;
-          this.description = row.description;
-          this.folder_path = row.folder_path;
-          this.bounds = pointsArray;
-          this.province_id = row.province_id;
-          this.district_id = row.district_id;
-          this.ward_id = row.ward_id;
-          this.created_at = row.created_at;
-    
-          return {
-            data: this,
-            status: true,
-            message: "success"
-          };
-    
+
         } catch (error) {
-          throw new Error(`Error executing query in PlanningMapModel: ${error}`);
+            throw new Error(`Error executing query in PlanningMapModel: ${error}`);
         }
-      }
+    }
+
+    async listMapInRange(lat: number, lon: number, range: number) {
+        const radiusDegrees = range / 111320;
+
+        const query = `
+          SELECT
+            id,
+            name,
+            description,
+            folder_path,
+            ST_AsText(bounds) AS bounds,
+            province_id,
+            district_id,
+            ward_id,
+            created_at
+          FROM planning_maps
+          WHERE ST_Intersects(
+            bounds,
+            ST_Buffer(
+              ST_SRID(ST_GeomFromText(?), 4326),
+              ?
+            )
+          )
+        `;
+
+        const pointWKT = `POINT(${lon} ${lat})`;
+
+        try {
+            const [rows]: any = await pool.query(query, [pointWKT, radiusDegrees]);
+
+            const results = rows.map((row: any) => {
+                const polygonText = row.bounds.replace("POLYGON((", "").replace("))", "");
+                const pointsArray: number[][] = polygonText.split(",").map((point: string) => {
+                    const [lng, lat] = point.trim().split(" ").map(Number);
+                    return [lat, lng];
+                });
+
+                return {
+                    id: row.id,
+                    name: row.name,
+                    description: row.description,
+                    folder_path: row.folder_path,
+                    bounds: pointsArray,
+                    province_id: row.province_id,
+                    district_id: row.district_id,
+                    ward_id: row.ward_id,
+                    created_at: row.created_at,
+                };
+            });
+
+            return {
+                data: results,
+                status: true,
+                message: "success",
+            };
+        } catch (error) {
+            throw new Error(`Error executing listMapInRange: ${error}`);
+        }
+    }
 }
