@@ -425,8 +425,8 @@ export class ConversationMemberModel {
                 status: true,
                 data: members,
                 total: totalResult[0].total,
-                currentPage: page,
-                totalPages: Math.ceil(totalResult[0].total / limit),
+                page,
+                page_size: limit,
                 message: 'Members retrieved successfully'
             };
         } catch (err: any) {

@@ -53,9 +53,21 @@ export class MessageModel {
             );
 
             const [message]: any = await pool.query(
-                'SELECT * FROM messages WHERE id = ?',
+                `SELECT m.*,
+                u.fullname AS sender_name,
+                u.avatar AS sender_avatar,
+                rm.content AS reply_content,
+                rm.sender_id AS reply_sender_id,
+                rm.type AS reply_type,
+                ru.fullname AS reply_sender_name,
+                ru.id AS reply_sender_id
+                 FROM messages m
+                 LEFT JOIN users u ON m.sender_id = u.id
+                 LEFT JOIN messages rm ON m.reply_id = rm.id
+                 LEFT JOIN users ru ON rm.sender_id = ru.id
+                 WHERE m.id = ?`,
                 [result.insertId]
-            )
+            );
 
             return {
                 status: true,
@@ -81,7 +93,19 @@ export class MessageModel {
             );
 
             const [message]: any = await pool.query(
-                'SELECT * FROM messages WHERE id = ?',
+                `SELECT m.*,
+                u.fullname AS sender_name,
+                u.avatar AS sender_avatar,
+                rm.content AS reply_content,
+                rm.sender_id AS reply_sender_id,
+                rm.type AS reply_type,
+                ru.fullname AS reply_sender_name,
+                ru.id AS reply_sender_id
+                 FROM messages m
+                 LEFT JOIN users u ON m.sender_id = u.id
+                 LEFT JOIN messages rm ON m.reply_id = rm.id
+                 LEFT JOIN users ru ON rm.sender_id = ru.id
+                 WHERE m.id = ?`,
                 [messageId]
             );
 
@@ -103,17 +127,36 @@ export class MessageModel {
         try {
             await pool.query(
                 `UPDATE messages 
-                SET status = ?, content = '[This message was deleted]', updated_at = NOW() 
+                SET status = ?, content = '[Tin nhắn đã bị xoá]', updated_at = NOW() 
                 WHERE id = ?`,
                 [MessageStatus.DELETED, messageId]
             );
 
+            const [message]: any = await pool.query(
+                `SELECT m.*,
+                u.fullname AS sender_name,
+                u.avatar AS sender_avatar,
+                rm.content AS reply_content,
+                rm.sender_id AS reply_sender_id,
+                rm.type AS reply_type,
+                ru.fullname AS reply_sender_name,
+                ru.id AS reply_sender_id
+                 FROM messages m
+                 LEFT JOIN users u ON m.sender_id = u.id
+                 LEFT JOIN messages rm ON m.reply_id = rm.id
+                 LEFT JOIN users ru ON rm.sender_id = ru.id
+                 WHERE m.id = ?`,
+                [messageId]
+            );
+
             return {
+                data: message[0],
                 status: true,
                 message: 'Message deleted successfully'
             };
         } catch (err: any) {
             return {
+                data: null,
                 status: false,
                 message: err.message
             };
@@ -155,12 +198,17 @@ export class MessageModel {
             const offset = (page - 1) * limit;
             const [messages]: any = await pool.query(
                 `SELECT m.*, 
-                    u.fullname as sender_name, 
-                    u.avatar as sender_avatar
+                    u.fullname AS sender_name, 
+                    u.avatar AS sender_avatar,
+                    rm.content AS reply_content, 
+                    rm.sender_id AS reply_sender_id,
+                    rm.type AS reply_type,
+                    ru.fullname AS reply_sender_name
                 FROM messages m
                 LEFT JOIN users u ON m.sender_id = u.id
+                LEFT JOIN messages rm ON m.reply_id = rm.id
+                LEFT JOIN users ru ON rm.sender_id = ru.id
                 WHERE m.conversation_id = ?
-                GROUP BY m.id
                 ORDER BY m.created_at DESC
                 LIMIT ? OFFSET ?`,
                 [conversationId, limit, offset]
@@ -175,8 +223,8 @@ export class MessageModel {
                 status: true,
                 data: messages,
                 total: total[0].count,
-                currentPage: page,
-                totalPages: Math.ceil(total[0].count / limit),
+                page,
+                page_size: limit,
                 message: 'Messages retrieved successfully'
             };
         } catch (err: any) {
@@ -267,13 +315,33 @@ export class MessageModel {
 
             return {
                 status: true,
-                data: {
-                    messages,
-                    total: total[0].count,
-                    currentPage: page,
-                    totalPages: Math.ceil(total[0].count / limit),
-                },
+                data: messages,
+                total: total[0].count,
+                page,
+                page_size: limit,
+
                 message: 'Messages retrieved successfully'
+            };
+        } catch (err: any) {
+            return {
+                status: false,
+                data: null,
+                message: err.message
+            };
+        }
+    }
+
+    async getMessageById(messageId: number) {
+        try {
+            const [message]: any = await pool.query(
+                'SELECT *, u.fullname as sender_name FROM messages m LEFT JOIN users u ON sender_id = u.id WHERE m.id = ?',
+                [messageId]
+            );
+
+            return {
+                status: true,
+                data: message[0],
+                message: 'Message retrieved successfully'
             };
         } catch (err: any) {
             return {

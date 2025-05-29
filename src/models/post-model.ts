@@ -334,6 +334,28 @@ export class PostModel {
         };
     }
 
+    private toWKTFromCoordinates(coords: [number, number][]): string {
+        if (coords.length === 1) {
+            const [lng, lat] = coords[0];
+            return `POINT(${lng} ${lat})`;
+        } else if (coords.length === 2) {
+            const coordStr = coords.map(([lng, lat]) => `${lng} ${lat}`).join(", ");
+            return `LINESTRING(${coordStr})`;
+        } else if (coords.length > 2) {
+            // Đảm bảo polygon khép kín (điểm đầu = điểm cuối)
+            const isClosed = coords[0][0] === coords[coords.length - 1][0] &&
+                coords[0][1] === coords[coords.length - 1][1];
+            if (!isClosed) {
+                coords.push(coords[0]); // khép kín polygon
+            }
+            const coordStr = coords.map(([lng, lat]) => `${lng} ${lat}`).join(", ");
+            return `POLYGON((${coordStr}))`;
+        } else {
+            throw new Error("Tọa độ không hợp lệ để tạo WKT");
+        }
+    }
+
+
     async getAll(page: number = 1, page_size: number = 10, filters: any = {}) {
         const pageTemp = Number(page)
         const pageSize = Number(page_size)
@@ -376,8 +398,8 @@ export class PostModel {
                 status: true,
                 message: 'success',
                 total: totalCount.total,
-                page,
-                totalPages: Math.ceil(totalCount.total / pageSize),
+                page: pageTemp,
+                page_size: pageSize,
             };
         } catch (err: any) {
             console.log(err)
@@ -443,9 +465,10 @@ export class PostModel {
 
             let { fields, values, params } = this.buildCreateQuery();
             let str = fields.join(" = ?, ") + " = ?";
+
             if (this.coordinates) {
                 str += `, coordinates = ST_GeomFromText(?)`;
-                params.push(this.coordinates);
+                params.push(this.toWKTFromCoordinates(this.coordinates as any));
             }
             const query = `UPDATE posts SET ${str} WHERE id = ?`;
             params.push(this.id);
@@ -531,7 +554,7 @@ export class PostModel {
                 message: 'success',
                 page: pageTemp,
                 total: totalCount.total,
-                totalPages: Math.ceil(totalCount.total / pageSize),
+                page_size: pageSize,
             };
         } catch (err: any) {
             console.error('SQL Error:', err.message);

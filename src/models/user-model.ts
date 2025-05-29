@@ -108,7 +108,7 @@ export class UserModel {
                 message: 'success',
                 page: pageTemp,
                 total: totalCount.total,
-                totalPages: Math.ceil(totalCount.total / pageSize),
+                page_size
             };
         } catch (err: any) {
             return { data: null, status: false, message: err.message || 'Failed to fetch users' };

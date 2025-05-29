@@ -42,14 +42,6 @@ export class ConversationsModel {
                     c.*,
                     COUNT(DISTINCT m.id) as total_messages,
                     COUNT(DISTINCT cm.user_id) as member_count,
-                    JSON_ARRAYAGG(
-                        JSON_OBJECT(
-                            'id', u.id,
-                            'fullname', u.fullname,
-                            'avatar', u.avatar,
-                            'role', cm.role
-                        )
-                    ) as members,
                     (
                         SELECT JSON_OBJECT(
                             'id', m2.id,
@@ -115,6 +107,44 @@ export class ConversationsModel {
         } catch (err: any) {
             return {
                 status: false,
+                message: err.message
+            };
+        }
+    }
+
+    async resetUnreadCount(conversationId: number, userId: number) {
+        try {
+            // Mark all unread messages as read
+            const [result]: any = await pool.query(
+                `INSERT IGNORE INTO message_reads (message_id, user_id, read_at)
+                SELECT m.id, ?, NOW()
+                FROM messages m
+                LEFT JOIN message_reads mr ON m.id = mr.message_id AND mr.user_id = ?
+                WHERE m.conversation_id = ?
+                AND m.sender_id != ?
+                AND mr.message_id IS NULL`,
+                [userId, userId, conversationId, userId]
+            );
+
+            // Update last seen timestamp
+            await pool.query(
+                `UPDATE conversation_members 
+                SET last_seen_at = NOW()
+                WHERE conversation_id = ? AND user_id = ?`,
+                [conversationId, userId]
+            );
+            
+            return {
+                status: true,
+                data: {
+                    markedCount: result.affectedRows,
+                },
+                message: 'Unread messages reset successfully'
+            };
+        } catch (err: any) {
+            return {
+                status: false,
+                data: null,
                 message: err.message
             };
         }
