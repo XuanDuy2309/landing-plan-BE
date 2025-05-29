@@ -1,6 +1,7 @@
 import http from 'http';
 import jwt from 'jsonwebtoken';
 import { Server, Socket } from 'socket.io';
+import { ConversationsModel } from '../models';
 
 class SocketService {
     private io: Server | null = null;
@@ -8,13 +9,8 @@ class SocketService {
     private userTypingMap = new Map<string, NodeJS.Timeout>();
     private activeCallMap = new Map<string, Set<string>>();
 
-    public init(server: http.Server) {
-        this.io = new Server(server, {
-            cors: {
-                origin: process.env.CLIENT_URL || 'http://localhost:5173',
-                credentials: true,
-            },
-        });
+    public init(server: http.Server, options?: any) {
+        this.io = new Server(server, options);
 
         this.io.on('connection', (socket: Socket) => {
             // const token: string = socket.handshake.query.auth as string;
@@ -32,7 +28,6 @@ class SocketService {
             if (userId) {
                 this.userSocketMap.set(userId, socket.id);
                 console.log(`🔌 User ${userId} connected: ${socket.id}`);
-
                 // Emit user online status
                 this.emitToAll('user_status_change', {
                     userId,
@@ -44,6 +39,8 @@ class SocketService {
             socket.on('join_conversation', (data) => {
                 const room = `conversation_${data.id}`;
                 socket.join(room);
+                const conversation = new ConversationsModel();
+                if (userId) { conversation.resetUnreadCount(data.id, userId); }
                 console.log(`User ${userId} joined ${room}`);
             });
 
@@ -67,7 +64,8 @@ class SocketService {
                 }
 
                 socket.to(room).emit('user_typing', {
-                    userId,
+                    typer_id: userId,
+                    typer_name: data.full_name,
                     conversationId: data.id,
                     isTyping: true
                 });
@@ -75,7 +73,8 @@ class SocketService {
                 // Set timeout to automatically stop typing after 3 seconds
                 const timeout = setTimeout(() => {
                     socket.to(room).emit('user_typing', {
-                        userId,
+                        typer_id: userId,
+                        typer_name: data.full_name,
                         conversationId: data.id,
                         isTyping: false
                     });
@@ -99,7 +98,8 @@ class SocketService {
                 }
 
                 socket.to(room).emit('user_typing', {
-                    userId,
+                    typer_id: userId,
+                    typer_name: data.full_name,
                     conversationId: data.id,
                     isTyping: false
                 });

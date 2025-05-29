@@ -29,4 +29,7 @@ router.delete('/:conversationId/messages/:messageId', authMiddleware, controller
 // Mention routes
 router.get('/:conversationId/mentions', authMiddleware, controller.getMentionedMessages.bind(controller));
 
+// Reset unread count
+router.post('/:conversationId/reset-unread', authMiddleware, controller.resetUnreadCount.bind(controller));
+
 export default router;

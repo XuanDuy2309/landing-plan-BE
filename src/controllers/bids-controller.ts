@@ -48,7 +48,7 @@ export class BidsController {
             const userInfo: any = await userModel.findUserById(user.id);
 
             const notifications = likedUserIds
-                .filter((id: number) => id !== user.id)
+                .filter((id: number) => id !== user.id && id !== postData.data.create_by_id)
                 .map((receiverId: number) => {
                     const notif = new NotificationModel();
                     const message = `${userInfo.data.fullname} đã đặt giá mới.`;
@@ -85,7 +85,7 @@ export class BidsController {
             notification.message = `${userInfo.data.fullname} đã đặt giá mới trên bài đấu giá của bạn.`;
             await notification.create()
                 .then((res) => {
-                    socketService.emitToUser(postData.data.create_by_id, 'bid_create', {
+                    socketService.emitToUser(postData.data.create_by_id, 'notification', {
                         ...notification
                     });
                 }).catch((err) => console.log(err));

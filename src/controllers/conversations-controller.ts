@@ -1,5 +1,4 @@
-import pool from '../config/db';
-import { ConversationMemberModel, ConversationsModel, MessageModel } from "../models";
+import { ConversationMemberModel, ConversationsModel, MessageModel, UserModel } from "../models";
 import { MemberRole } from "../models/conversation-member-model";
 import { ConversationType } from "../models/conversations-model";
 import { MessageType } from "../models/message-model";
@@ -80,7 +79,7 @@ export class ConversationsController {
     async getMessages(req: any, res: any) {
         try {
             const { conversationId } = req.params;
-            const { page = 1, limit = 20 } = req.query;
+            const { page = 1, page_size = 20 } = req.query;
             const { user } = req;
 
             // Check if user is member of conversation
@@ -98,7 +97,7 @@ export class ConversationsController {
             const result = await message.getMessagesByConversationId(
                 parseInt(conversationId),
                 parseInt(page),
-                parseInt(limit)
+                parseInt(page_size)
             );
 
             return res.status(200).json(result);
@@ -110,7 +109,7 @@ export class ConversationsController {
     async sendMessage(req: any, res: any) {
         try {
             const { conversationId } = req.params;
-            const { content, type = MessageType.TEXT, replyId } = req.body;
+            const { content, type = MessageType.TEXT, reply_id } = req.body;
             const { user } = req;
 
             // Check if user is member of conversation
@@ -124,13 +123,19 @@ export class ConversationsController {
                 });
             }
 
+            const senderUser = new UserModel()
+            const sender = await senderUser.findUserById(user.id);
+            if (!sender.status) {
+                return res.status(400).json(sender);
+            }
+
             // Create message
             const message = new MessageModel();
             message.conversation_id = parseInt(conversationId);
             message.sender_id = user.id;
             message.content = content;
             message.type = type;
-            message.reply_id = replyId;
+            message.reply_id = reply_id;
 
             const result = await message.create();
 
@@ -143,15 +148,20 @@ export class ConversationsController {
             await conversation.updateLastMessage(parseInt(conversationId));
 
             // Emit message to conversation room
-            const messageData = {
-                ...result.data,
-                sender_name: user.full_name,
-                sender_avatar: user.avatar
-            };
 
-            socketService.emitToConversation(conversationId, 'new_message', messageData);
 
-            // Send mention notifications to mentioned use
+            socketService.emitToConversation(conversationId, 'new_message', result.data);
+
+            const members = await member.getListMembers(parseInt(conversationId));
+
+            // Notify other members about the new message
+            members.data.forEach((member: any) => {
+                if (member.id !== user.id) {
+                    socketService.emitToUser(member.id, 'notification_message', result.data);
+                }
+            });
+
+            // Send mention notification to mentioned use
 
             return res.status(200).json(result);
         } catch (error: any) {
@@ -171,13 +181,10 @@ export class ConversationsController {
             if (!messageData.status) {
                 return res.status(400).json(messageData);
             }
-
             // Notify other members about the edit
             socketService.emitToConversation(conversationId, 'message_edited', {
                 ...messageData.data,
-                sender_name: user.full_name,
-                sender_avatar: user.avatar
-            }, user.id);
+            });
 
             return res.status(200).json(messageData);
         } catch (error: any) {
@@ -199,10 +206,8 @@ export class ConversationsController {
 
             // Notify other members about the deletion
             socketService.emitToConversation(conversationId, 'message_deleted', {
-                messageId,
-                conversationId,
-                userId: user.id
-            }, user.id);
+                ...result.data
+            });
 
             return res.status(200).json(result);
         } catch (error: any) {
@@ -475,49 +480,6 @@ export class ConversationsController {
         }
     }
 
-    async processMentionNotification(messageId: number, mentionedUserId: number, conversationId: number) {
-        try {
-            // Lấy thông tin tin nhắn và người gửi
-            const [messageData]: any = await pool.query(
-                `SELECT m.*, u.fullname as sender_name, u.avatar as sender_avatar,
-                c.name as conversation_name
-                FROM messages m 
-                JOIN users u ON m.sender_id = u.id
-                JOIN conversations c ON m.conversation_id = c.id
-                WHERE m.id = ?`,
-                [messageId]
-            );
-
-            // Lưu thông báo với thông tin chi tiết
-            await pool.query(
-                `INSERT INTO notifications 
-                (user_id, type, reference_id, reference_type, data, created_at)
-                VALUES (?, 'mention', ?, 'message', ?, NOW())`,
-                [
-                    mentionedUserId,
-                    messageId,
-                    JSON.stringify({
-                        conversationId,
-                        conversationName: messageData[0].conversation_name,
-                        senderName: messageData[0].sender_name,
-                        senderAvatar: messageData[0].sender_avatar,
-                        messageContent: messageData[0].content
-                    })
-                ]
-            );
-
-            // Gửi thông báo realtime
-            socketService.emitToUser(mentionedUserId, 'new_notification', {
-                type: 'mention',
-                messageId,
-                conversationId
-            });
-
-        } catch (error) {
-            console.error('Error processing mention notification:', error);
-        }
-    }
-
     async updateLastSeen(req: any, res: any) {
         try {
             const { conversationId } = req.params;
@@ -536,6 +498,31 @@ export class ConversationsController {
 
             // Update last seen timestamp
             const result = await member.updateLastSeen(parseInt(conversationId), user.id);
+            return res.status(200).json(result);
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async resetUnreadCount(req: any, res: any) {
+        try {
+            const { conversationId } = req.params;
+            const { user } = req;
+
+            // Check if user is member of conversation
+            const member = new ConversationMemberModel();
+            const isMember = await member.isMember(parseInt(conversationId), user.id);
+
+            if (!isMember.data) {
+                return res.status(403).json({
+                    status: false,
+                    message: 'You are not a member of this conversation'
+                });
+            }
+
+            const conversation = new ConversationsModel();
+            const result = await conversation.resetUnreadCount(parseInt(conversationId), user.id);
+
             return res.status(200).json(result);
         } catch (error: any) {
             return res.status(500).json({ message: error.message });

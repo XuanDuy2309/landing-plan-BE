@@ -32,7 +32,7 @@ export class ProvinceModel {
                 message: 'success',
                 total: totalCount.total,
                 page,
-                totalPages: Math.ceil(totalCount.total / page_size),
+                page_size
             };
         } catch (err) {
             return { data: null, status: false, message: err };

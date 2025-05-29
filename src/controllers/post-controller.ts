@@ -187,4 +187,15 @@ export class PostController {
             return res.status(400).json({ message: err.message || 'Failed to fetch posts' });
         }
     }
+
+    async checkLiked(req: any, res: any) {
+        const { id } = req.params;
+        const { user } = req;
+        if (!id) {
+            return res.status(400).json({ message: 'id not found' });
+        }
+        const postLike = new PostLikeModel();
+        const data = await postLike.findOne({ post_id: Number(id), create_by_id: user.id });
+        return res.status(200).json(data);
+    }
 }
