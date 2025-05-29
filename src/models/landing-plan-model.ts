@@ -75,14 +75,17 @@ export class LandingPlanModel {
                 message: "success"
             };
 
-        } catch (error) {
-            throw new Error(`Error executing query in PlanningMapModel: ${error}`);
+        } catch (error: any) {
+            return {
+                data: null,
+                status: false,
+                message: error.message || "An error occurred"
+            };
         }
     }
 
     async listMapInRange(lat: number, lon: number, range: number) {
         const radiusDegrees = range / 111320;
-
         const query = `
           SELECT
             id,
@@ -100,7 +103,7 @@ export class LandingPlanModel {
           WHERE ST_Intersects(
             bounds,
             ST_Buffer(
-              ST_GeomFromText(?, 4326),
+              ST_GeomFromText(?),
               ?
             )
           )
@@ -159,9 +162,12 @@ export class LandingPlanModel {
                 message: "success",
             };
 
-        } catch (error) {
-            console.error(error)
-            throw new Error(`Error executing listMapInRange: ${error}`);
+        } catch (error: any) {
+            return {
+                data: null,
+                status: false,
+                message: error.message + 1 || "An error occurred",
+            }
         }
     }
 }
