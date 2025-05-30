@@ -1,4 +1,5 @@
 export * from './bids-model';
+export * from './chat-bot-model';
 export * from './conversation-member-model';
 export * from './conversations-model';
 export * from './coordinates-location-model';
