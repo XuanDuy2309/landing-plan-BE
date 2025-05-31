@@ -28,11 +28,6 @@ class SocketService {
             if (userId) {
                 this.userSocketMap.set(userId, socket.id);
                 console.log(`🔌 User ${userId} connected: ${socket.id}`);
-                // Emit user online status
-                this.emitToAll('user_status_change', {
-                    userId,
-                    online: true
-                });
             }
 
             // Join conversation room

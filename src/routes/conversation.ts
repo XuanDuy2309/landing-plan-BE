@@ -8,7 +8,9 @@ const controller = new ConversationsController();
 // Basic conversation routes
 router.get('/', authMiddleware, controller.getConversations.bind(controller));
 router.get('/:conversationId', authMiddleware, controller.getDetailConversation.bind(controller));
+router.put('/:conversationId', authMiddleware, controller.updateConversation.bind(controller));
 router.post('/', authMiddleware, controller.createConversation.bind(controller));
+router.delete('/:conversationId', authMiddleware, controller.deleteConversation.bind(controller));
 router.post('/:conversationId/members', authMiddleware, controller.addMembersToGroup.bind(controller));
 
 // Member management routes

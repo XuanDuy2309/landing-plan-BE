@@ -51,6 +51,12 @@ export class ConversationsController {
             // Get complete conversation data
             const conversationData = await conversation.getById(result.data.id);
 
+            for (const member of allMembers) {
+                socketService.emitToUser(member, 'conversation_created', {
+                    ...conversationData.data
+                });
+            }
+
             return res.status(200).json(conversationData);
         } catch (error: any) {
             return res.status(500).json({ message: error.message });
@@ -100,10 +106,17 @@ export class ConversationsController {
                 parseInt(page_size)
             );
 
+            await member.updateLastSeen(parseInt(conversationId), user.id);
+
             return res.status(200).json(result);
         } catch (error: any) {
             return res.status(500).json({ message: error.message });
         }
+    }
+
+    private isMuted(member: ConversationMemberModel): boolean {
+        const mutedUntil = new Date(member.muted_until || '').getTime();
+        return mutedUntil > Date.now();
     }
 
     async sendMessage(req: any, res: any) {
@@ -121,12 +134,6 @@ export class ConversationsController {
                     status: false,
                     message: 'You are not a member of this conversation'
                 });
-            }
-
-            const senderUser = new UserModel()
-            const sender = await senderUser.findUserById(user.id);
-            if (!sender.status) {
-                return res.status(400).json(sender);
             }
 
             // Create message
@@ -156,12 +163,13 @@ export class ConversationsController {
 
             // Notify other members about the new message
             members.data.forEach((member: any) => {
-                if (member.id !== user.id) {
+                if (member.id !== user.id && !this.isMuted(member)) {
                     socketService.emitToUser(member.id, 'notification_message', result.data);
                 }
             });
 
-            // Send mention notification to mentioned use
+            await member.updateLastSeen(parseInt(conversationId), user.id);
+
 
             return res.status(200).json(result);
         } catch (error: any) {
@@ -175,6 +183,7 @@ export class ConversationsController {
             const { content, type = MessageType.TEXT } = req.body;
             const { user } = req;
 
+            const member = new ConversationMemberModel();
             const message = new MessageModel();
             const messageData = await message.edit(parseInt(messageId), content, type);
 
@@ -185,6 +194,9 @@ export class ConversationsController {
             socketService.emitToConversation(conversationId, 'message_edited', {
                 ...messageData.data,
             });
+
+            await member.updateLastSeen(parseInt(conversationId), user.id);
+
 
             return res.status(200).json(messageData);
         } catch (error: any) {
@@ -197,6 +209,7 @@ export class ConversationsController {
             const { conversationId, messageId } = req.params;
             const { user } = req;
 
+            const member = new ConversationMemberModel();
             const message = new MessageModel();
             const result = await message.delete(parseInt(messageId));
 
@@ -208,6 +221,9 @@ export class ConversationsController {
             socketService.emitToConversation(conversationId, 'message_deleted', {
                 ...result.data
             });
+
+            await member.updateLastSeen(parseInt(conversationId), user.id);
+
 
             return res.status(200).json(result);
         } catch (error: any) {
@@ -275,14 +291,13 @@ export class ConversationsController {
                 });
             }
 
-            // Kiểm tra xem người dùng hiện tại có phải là admin của nhóm không
             const member = new ConversationMemberModel();
-            const memberData = await member.getMemberRole(parseInt(conversationId), user.id);
+            const memberData = await member.isMember(parseInt(conversationId), user.id);
 
-            if (!memberData.data || memberData.data.role !== MemberRole.ADMIN) {
+            if (!memberData.status) {
                 return res.status(403).json({
                     status: false,
-                    message: 'Only group admin can add members'
+                    message: 'You are not a member of this conversation'
                 });
             }
 
@@ -396,12 +411,82 @@ export class ConversationsController {
         }
     }
 
+    async deleteConversation(req: any, res: any) {
+        try {
+            const conversationId = parseInt(req.params.conversationId);
+            if (isNaN(conversationId)) {
+                return res.status(400).json({ message: 'Invalid conversation ID' });
+            }
+
+            const { user } = req;
+            const member = new ConversationMemberModel();
+            const conversation = new ConversationsModel();
+
+            const [isMember, isAdmin, cInfo] = await Promise.all([
+                member.isMember(conversationId, user.id),
+                member.isAdmin(conversationId, user.id),
+                conversation.getById(conversationId)
+            ]);
+
+            if (!cInfo.status) {
+                return res.status(404).json({ message: 'Conversation not found' });
+            }
+
+            const isDirect = cInfo.data.type === ConversationType.DIRECT;
+
+            if ((isDirect && isMember.data) || isAdmin.data) {
+                // Get members BEFORE deletion
+                const members = await member.getListMembers(conversationId);
+
+                const rmConversation = await conversation.deleteConversation(conversationId);
+                if (!rmConversation.status) {
+                    return res.status(500).json({ message: rmConversation.message });
+                }
+
+                // Notify other users
+                members.data?.forEach((m: any) => {
+                    if (m.id !== user.id) {
+                        socketService.emitToUser(m.id, 'conversation_deleted', {
+                            conversationId
+                        });
+                    }
+                });
+
+                return res.status(200).json({ message: 'Conversation deleted successfully' });
+            } else {
+                return res.status(403).json({ message: 'You do not have permission to delete this conversation' });
+            }
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+
+
     async removeMemberFromGroup(req: any, res: any) {
         try {
             const { conversationId, memberId } = req.params;
             const { user } = req;
 
             const member = new ConversationMemberModel();
+            const auth = new UserModel();
+            const authInfo = await auth.findUserById(user.id);
+
+            if (memberId === user.id) {
+                const result = await member.removeMember(parseInt(conversationId), user.id);
+                if (!result.status) {
+                    return res.status(400).json(result);
+                }
+                socketService.emitToConversation(conversationId, 'member_removed', {
+                    conversationId: parseInt(conversationId),
+                    message: `${authInfo.data.fullname} đã rời khỏi cuộc trò chuyện`,
+                });
+
+                socketService.emitToUser(user.id, 'removed_from_conversation', {
+                    conversationId: parseInt(conversationId),
+                });
+                return res.status(200).json(result);
+            }
 
             // Kiểm tra quyền admin
             const isAdmin = await member.isAdmin(parseInt(conversationId), user.id);
@@ -417,22 +502,12 @@ export class ConversationsController {
                 // Thông báo cho các thành viên khác
                 socketService.emitToConversation(conversationId, 'member_removed', {
                     conversationId: parseInt(conversationId),
-                    removedBy: {
-                        id: user.id,
-                        name: user.fullname,
-                        avatar: user.avatar
-                    },
-                    removedMemberId: parseInt(memberId)
+                    message: `${result.data.fullname} được ${authInfo.data.fullname} xoá khỏi cuộc trò chuyện`,
                 });
 
                 // Thông báo cho thành viên bị xóa
                 socketService.emitToUser(memberId, 'removed_from_conversation', {
                     conversationId: parseInt(conversationId),
-                    removedBy: {
-                        id: user.id,
-                        name: user.fullname,
-                        avatar: user.avatar
-                    }
                 });
             }
 
@@ -579,6 +654,44 @@ export class ConversationsController {
 
             // Search for members to mention
             const result = await member.getListMembers(parseInt(conversationId), parseInt(page), parseInt(page_size), query);
+            return res.status(200).json(result);
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async updateConversation(req: any, res: any) {
+        try {
+            const { conversationId } = req.params;
+            const { name, avatar } = req.body;
+            const { user } = req;
+
+            const member = new ConversationMemberModel();
+            const isMember = await member.isMember(parseInt(conversationId), user.id);
+
+            if (!isMember.data) {
+                return res.status(403).json({
+                    status: false,
+                    message: 'You are not a member of this conversation'
+                });
+            }
+
+            const conversation = new ConversationsModel();
+            const updateConversation = await conversation.updateConversation(parseInt(conversationId), name, avatar);
+
+            if (!updateConversation.status) {
+                return res.status(400).json(updateConversation);
+            }
+
+            const result = await conversation.getById(parseInt(conversationId));
+            if (!result.status) {
+                return res.status(400).json(result);
+            }
+            for (const member of result.data.members) {
+                socketService.emitToUser(member.id, 'conversation_updated', {
+                    ...result.data,
+                });
+            }
             return res.status(200).json(result);
         } catch (error: any) {
             return res.status(500).json({ message: error.message });

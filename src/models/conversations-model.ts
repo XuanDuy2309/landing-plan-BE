@@ -9,10 +9,12 @@ export class ConversationsModel {
     id?: number;
     name?: string;
     type: ConversationType = ConversationType.DIRECT;
+    avatar?: string;
+    last_message_id?: number;
     created_at?: string;
     updated_at?: string;
 
-    constructor() {}
+    constructor() { }
 
     async create() {
         try {
@@ -20,7 +22,7 @@ export class ConversationsModel {
                 'INSERT INTO conversations (name, type) VALUES (?, ?)',
                 [this.name, this.type]
             );
-            
+
             return {
                 status: true,
                 data: { ...this, id: result.insertId },
@@ -37,39 +39,61 @@ export class ConversationsModel {
 
     async getById(id: number) {
         try {
-            const [conversations]: any = await pool.query(
-                `SELECT 
-                    c.*,
-                    COUNT(DISTINCT m.id) as total_messages,
-                    COUNT(DISTINCT cm.user_id) as member_count,
-                    (
-                        SELECT JSON_OBJECT(
-                            'id', m2.id,
-                            'content', m2.content,
-                            'type', m2.type,
-                            'created_at', m2.created_at,
-                            'sender', JSON_OBJECT(
-                                'id', u2.id,
-                                'fullname', u2.fullname,
-                                'avatar', u2.avatar
-                            )
+            const [rows]: any = await pool.query(
+                `
+            SELECT 
+                c.id,
+                c.name,
+                c.avatar,
+                c.type,
+                c.created_at,
+                c.updated_at,
+                (
+                    SELECT COUNT(DISTINCT m.id)
+                    FROM messages m
+                    WHERE m.conversation_id = c.id
+                ) as total_messages,
+                (
+                    SELECT COUNT(DISTINCT cm.user_id)
+                    FROM conversation_members cm
+                    WHERE cm.conversation_id = c.id
+                ) as member_count,
+                (
+                    SELECT JSON_OBJECT(
+                        'id', m2.id,
+                        'content', m2.content,
+                        'type', m2.type,
+                        'created_at', m2.created_at,
+                        'sender_id', u2.id,
+                        'sender_name', u2.fullname,
+                        'sender_avatar', u2.avatar
+                    )
+                    FROM messages m2
+                    JOIN users u2 ON m2.sender_id = u2.id
+                    WHERE m2.conversation_id = c.id
+                    ORDER BY m2.created_at DESC, m2.id DESC
+                    LIMIT 1
+                ) as last_message,
+                (
+                    SELECT JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'id', u3.id,
+                            'fullname', u3.fullname,
+                            'avatar', u3.avatar
                         )
-                        FROM messages m2 
-                        JOIN users u2 ON m2.sender_id = u2.id
-                        WHERE m2.conversation_id = c.id 
-                        ORDER BY m2.created_at DESC 
-                        LIMIT 1
-                    ) as last_message
-                FROM conversations c
-                LEFT JOIN messages m ON c.id = m.conversation_id
-                LEFT JOIN conversation_members cm ON c.id = cm.conversation_id
-                LEFT JOIN users u ON cm.user_id = u.id
-                WHERE c.id = ?
-                GROUP BY c.id`,
+                    )
+                    FROM conversation_members cm3
+                    JOIN users u3 ON cm3.user_id = u3.id
+                    WHERE cm3.conversation_id = c.id
+                ) as members
+            FROM conversations c
+            WHERE c.id = ?
+            LIMIT 1
+            `,
                 [id]
             );
 
-            if (conversations.length === 0) {
+            if (rows.length === 0) {
                 return {
                     status: false,
                     data: null,
@@ -79,7 +103,7 @@ export class ConversationsModel {
 
             return {
                 status: true,
-                data: conversations[0],
+                data: rows[0],
                 message: 'Conversation retrieved successfully'
             };
         } catch (err: any) {
@@ -91,6 +115,7 @@ export class ConversationsModel {
         }
     }
 
+
     // Removed getUserConversations as it's replaced by getConversationsByUserId in ConversationMemberModel
 
     async updateLastMessage(id: number) {
@@ -99,7 +124,7 @@ export class ConversationsModel {
                 'UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?',
                 [id]
             );
-            
+
             return {
                 status: true,
                 message: 'Conversation updated successfully'
@@ -133,7 +158,7 @@ export class ConversationsModel {
                 WHERE conversation_id = ? AND user_id = ?`,
                 [conversationId, userId]
             );
-            
+
             return {
                 status: true,
                 data: {
@@ -162,18 +187,87 @@ export class ConversationsModel {
                 AND cm2.user_id = ?
                 LIMIT 1
             `, [ConversationType.DIRECT, userId1, userId2]);
-            
+
             return {
                 status: true,
                 data: rows[0],
                 message: rows[0] ? 'Direct chat found' : 'No direct chat found'
             };
         } catch (err: any) {
-            return { 
-                status: false, 
-                data: null, 
-                message: err.message 
+            return {
+                status: false,
+                data: null,
+                message: err.message
             };
         }
     }
+
+    async updateConversation(id: number, name?: string, avatar?: string) {
+        try {
+            if (!id) {
+                return {
+                    status: false,
+                    data: null,
+                    message: 'Missing conversation ID'
+                };
+            }
+
+            const fields: string[] = [];
+            const values: any[] = [];
+
+            if (name !== undefined) {
+                fields.push('name = ?');
+                values.push(name);
+            }
+
+            if (avatar !== undefined) {
+                fields.push('avatar = ?');
+                values.push(avatar);
+            }
+
+            if (fields.length === 0) {
+                return {
+                    status: false,
+                    data: null,
+                    message: 'No fields to update'
+                };
+            }
+
+            const query = `UPDATE conversations SET ${fields.join(', ')} WHERE id = ?`;
+            values.push(id);
+
+            const [result]: any = await pool.query(query, values);
+
+            return {
+                status: true,
+                data: result,
+                message: 'Conversation updated successfully'
+            };
+        } catch (err: any) {
+            return {
+                status: false,
+                data: null,
+                message: err.message
+            };
+        }
+    }
+
+    async deleteConversation(id: number) {
+        try {
+            const [result]: any = await pool.query('DELETE FROM conversations WHERE id = ?', [id]);
+
+            return {
+                status: true,
+                data: result,
+                message: 'Conversation deleted successfully'
+            };
+        } catch (err: any) {
+            return {
+                status: false,
+                data: null,
+                message: err.message
+            };
+        }
+    }
+
 }

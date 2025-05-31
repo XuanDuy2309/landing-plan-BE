@@ -10,6 +10,7 @@ export class ConversationMemberModel {
     conversation_id?: number;
     user_id?: number;
     role: MemberRole = MemberRole.MEMBER;
+    nickname?: string;
     joined_at?: string;
     last_seen_at?: string;
     muted_until?: string;
@@ -97,7 +98,19 @@ export class ConversationMemberModel {
                             FROM message_reads 
                             WHERE user_id = ?
                         )
-                    ) as unread_count
+                    ) as unread_count,
+                    (
+                        SELECT JSON_ARRAYAGG(
+                            JSON_OBJECT(
+                                'id', u2.id,
+                                'fullname', u2.fullname,
+                                'avatar', u2.avatar
+                            )
+                        )
+                        FROM conversation_members cm3
+                        JOIN users u2 ON cm3.user_id = u2.id
+                        WHERE cm3.conversation_id = c.id
+                    ) as members
                 FROM conversations c
                 JOIN conversation_members cm ON c.id = cm.conversation_id
                 JOIN conversation_members cm2 ON c.id = cm2.conversation_id
@@ -221,12 +234,19 @@ export class ConversationMemberModel {
                 [conversationId, userId]
             );
 
+            const [users]: any = await pool.query(
+                'SELECT * FROM users WHERE id = ?',
+                [userId]
+            );
+
             return {
+                data: users[0],
                 status: true,
                 message: 'Member removed successfully'
             };
         } catch (err: any) {
             return {
+                data: null,
                 status: false,
                 message: err.message
             };
@@ -375,6 +395,8 @@ export class ConversationMemberModel {
                     cm.joined_at,
                     cm.last_seen_at,
                     cm.muted_until,
+                    cm.nickname,
+                    muted_until,
                     CASE 
                         WHEN cm.last_seen_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE) THEN true 
                         ELSE false 
