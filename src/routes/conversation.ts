@@ -17,6 +17,7 @@ router.post('/:conversationId/members', authMiddleware, controller.addMembersToG
 router.get('/:conversationId/users', authMiddleware, controller.getListMentionUsers.bind(controller));
 router.delete('/:conversationId/members/:memberId', authMiddleware, controller.removeMemberFromGroup.bind(controller));
 router.patch('/:conversationId/members/:memberId/role', authMiddleware, controller.updateMemberRole.bind(controller));
+router.patch('/:conversationId/members/:memberId/nickname', authMiddleware, controller.setNickName.bind(controller));
 
 // Conversation settings routes
 router.patch('/:conversationId/settings', authMiddleware, controller.updateConversationSettings.bind(controller));

@@ -66,9 +66,12 @@ export class ConversationsModel {
                         'created_at', m2.created_at,
                         'sender_id', u2.id,
                         'sender_name', u2.fullname,
-                        'sender_avatar', u2.avatar
+                        'sender_avatar', u2.avatar,
+                        'sender_nickname', cm2.nickname
                     )
                     FROM messages m2
+                    JOIN conversation_members cm2 
+                        ON m2.sender_id = cm2.user_id AND cm2.conversation_id = ?
                     JOIN users u2 ON m2.sender_id = u2.id
                     WHERE m2.conversation_id = c.id
                     ORDER BY m2.created_at DESC, m2.id DESC
@@ -90,7 +93,7 @@ export class ConversationsModel {
             WHERE c.id = ?
             LIMIT 1
             `,
-                [id]
+                [id, id]
             );
 
             if (rows.length === 0) {
@@ -114,6 +117,7 @@ export class ConversationsModel {
             };
         }
     }
+
 
 
     // Removed getUserConversations as it's replaced by getConversationsByUserId in ConversationMemberModel

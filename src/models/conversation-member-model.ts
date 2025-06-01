@@ -80,9 +80,11 @@ export class ConversationMemberModel {
                             'created_at', m2.created_at,
                             'sender_id', u2.id,
                             'sender_name', u2.fullname,
-                            'sender_avatar', u2.avatar
+                            'sender_avatar', u2.avatar,
+                            'sender_nickname', cm2.nickname
                         )
                         FROM messages m2 
+                        JOIN conversation_members cm2 ON m2.sender_id = cm2.user_id AND m2.conversation_id = cm2.conversation_id
                         JOIN users u2 ON m2.sender_id = u2.id
                         WHERE m2.conversation_id = c.id 
                         ORDER BY m2.created_at DESC 
@@ -455,6 +457,36 @@ export class ConversationMemberModel {
             return {
                 status: false,
                 data: null,
+                message: err.message
+            };
+        }
+    }
+
+    async setNickname(conversationId: number, userId: number, nickname: string) {
+        try {
+            await pool.query(
+                'UPDATE conversation_members SET nickname = ? WHERE conversation_id = ? AND user_id = ?',
+                [nickname, conversationId, userId]
+            );
+
+            const [result]: any = await pool.query(`
+                SELECT u.id,
+                u.fullname,
+                cm.nickname
+                FROM conversation_members cm
+                JOIN users u ON cm.user_id = u.id
+                WHERE cm.conversation_id = ? AND cm.user_id = ?
+            `, [conversationId, userId]);
+
+            return {
+                data: result[0],
+                status: true,
+                message: 'Nickname updated successfully'
+            };
+        } catch (err: any) {
+            return {
+                data: null,
+                status: false,
                 message: err.message
             };
         }

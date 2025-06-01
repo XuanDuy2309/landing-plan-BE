@@ -56,12 +56,16 @@ export class MessageModel {
                 `SELECT m.*,
                 u.fullname AS sender_name,
                 u.avatar AS sender_avatar,
+                cm.nickname AS sender_nickname,
                 rm.content AS reply_content,
                 rm.sender_id AS reply_sender_id,
                 rm.type AS reply_type,
                 ru.fullname AS reply_sender_name,
-                ru.id AS reply_sender_id
+                ru.id AS reply_sender_id,
+                rcm.nickname AS reply_sender_nickname
                  FROM messages m
+                 LEFT JOIN conversation_members cm ON m.sender_id = cm.user_id AND m.conversation_id = cm.conversation_id
+                 LEFT JOIN conversation_members rcm ON m.reply_id = rcm.user_id AND m.conversation_id = rcm.conversation_id
                  LEFT JOIN users u ON m.sender_id = u.id
                  LEFT JOIN messages rm ON m.reply_id = rm.id
                  LEFT JOIN users ru ON rm.sender_id = ru.id
@@ -200,14 +204,18 @@ export class MessageModel {
                 `SELECT m.*, 
                     u.fullname AS sender_name, 
                     u.avatar AS sender_avatar,
+                    cm.nickname AS sender_nickname,
                     rm.content AS reply_content, 
                     rm.sender_id AS reply_sender_id,
                     rm.type AS reply_type,
+                    rcm.nickname AS reply_sender_nickname,
                     ru.fullname AS reply_sender_name
                 FROM messages m
                 LEFT JOIN users u ON m.sender_id = u.id
                 LEFT JOIN messages rm ON m.reply_id = rm.id
                 LEFT JOIN users ru ON rm.sender_id = ru.id
+                LEFT JOIN conversation_members cm ON m.sender_id = cm.user_id AND m.conversation_id = cm.conversation_id
+                LEFT JOIN conversation_members rcm ON rm.sender_id = rcm.user_id AND rm.conversation_id = rcm.conversation_id
                 WHERE m.conversation_id = ?
                 ORDER BY m.created_at DESC
                 LIMIT ? OFFSET ?`,

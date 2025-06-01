@@ -493,7 +493,7 @@ export class ConversationsController {
             if (!isAdmin.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'Only admin can remove members'
+                    message: 'Chỉ quản trị viên mới có thể xoá thành viên'
                 });
             }
 
@@ -692,6 +692,37 @@ export class ConversationsController {
                     ...result.data,
                 });
             }
+            return res.status(200).json(result);
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async setNickName(req: any, res: any) {
+        try {
+            const { conversationId, memberId } = req.params;
+            const { nickname } = req.body;
+            const { user } = req;
+            
+            // Check if user is member of conversation
+            const member = new ConversationMemberModel();
+            const isMember = await member.isMember(parseInt(conversationId), user.id);
+
+            if (!isMember.data) {
+                return res.status(403).json({
+                    status: false,
+                    message: 'You are not a member of this conversation'
+                });
+            }
+
+            // Update nickname
+            const result = await member.setNickname(parseInt(conversationId), memberId, nickname);
+            if (!result.status) {
+                return res.status(400).json(result);
+            }
+            socketService.emitToConversation(parseInt(conversationId), 'nickname_updated', {
+                ...result.data,
+            })
             return res.status(200).json(result);
         } catch (error: any) {
             return res.status(500).json({ message: error.message });
