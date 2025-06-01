@@ -23,7 +23,8 @@ export const enum MessageType {
     EMOJI = 'emoji',
     AUDIO_CALL = 'audio_call',
     VIDEO_CALL = 'video_call',
-    MENTION = 'mention'
+    MENTION = 'mention',
+    SYSTEM = 'system',
 }
 
 export const enum MessageStatus {

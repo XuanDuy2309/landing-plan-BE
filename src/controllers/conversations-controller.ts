@@ -292,30 +292,30 @@ export class ConversationsController {
             }
 
             const member = new ConversationMemberModel();
-            const memberData = await member.isMember(parseInt(conversationId), user.id);
+            const conversation = new ConversationsModel();
 
-            if (!memberData.status) {
+            // Check if current user is member of conversation
+            const memberData = await member.isMember(parseInt(conversationId), user.id);
+            if (!memberData.status || !memberData.data) {
                 return res.status(403).json({
                     status: false,
                     message: 'You are not a member of this conversation'
                 });
             }
 
-            // Kiểm tra xem có phải là group conversation không
-            const conversation = new ConversationsModel();
+            // Check if conversation is group type
             const conversationData = await conversation.getById(parseInt(conversationId));
-
-            if (!conversationData.data || conversationData.data.type !== ConversationType.GROUP) {
+            if (!conversationData.status || !conversationData.data || conversationData.data.type !== ConversationType.GROUP) {
                 return res.status(400).json({
                     status: false,
                     message: 'This is not a group conversation'
                 });
             }
 
-            // Thêm các thành viên mới
+            // Add members to conversation
             const addedMembers = await this.addMembersToConversation(parseInt(conversationId), memberIds);
 
-            // Lấy thông tin chi tiết của các thành viên mới
+            // Get full info of new members added
             const newMembersData = await member.getMembersByConversationId(parseInt(conversationId));
             if (!newMembersData.status || !newMembersData.data) {
                 return res.status(500).json({
@@ -326,6 +326,16 @@ export class ConversationsController {
 
             const newMembers = newMembersData.data.filter((m: any) => memberIds.includes(m.user_id));
 
+            // Tạo tin nhắn hệ thống thông báo thêm thành viên
+            const systemMessage = new MessageModel();
+            systemMessage.conversation_id = parseInt(conversationId);
+            systemMessage.sender_id = user.id;  // Người thêm
+            const newMemberNames = newMembers.map((m: any) => m.fullname || 'Người dùng').join(', ');
+            systemMessage.content = `${user.fullname} đã thêm ${newMemberNames} vào cuộc trò chuyện`;
+            systemMessage.type = MessageType.SYSTEM;
+
+            await systemMessage.create();
+
             // Thông báo cho các thành viên hiện tại về việc có thành viên mới
             socketService.emitToConversation(conversationId, 'members_added', {
                 conversationId: parseInt(conversationId),
@@ -334,7 +344,8 @@ export class ConversationsController {
                     name: user.fullname,
                     avatar: user.avatar
                 },
-                newMembers
+                newMembers,
+                systemMessage: systemMessage.content
             });
 
             // Gửi thông báo cho các thành viên mới
@@ -359,6 +370,7 @@ export class ConversationsController {
             return res.status(500).json({ message: error.message });
         }
     }
+
 
     async getDetailConversation(req: any, res: any) {
         try {
@@ -465,31 +477,46 @@ export class ConversationsController {
 
     async removeMemberFromGroup(req: any, res: any) {
         try {
-            const { conversationId, memberId } = req.params;
+            const conversationId = parseInt(req.params.conversationId);
+            const memberId = parseInt(req.params.memberId);
             const { user } = req;
 
             const member = new ConversationMemberModel();
             const auth = new UserModel();
             const authInfo = await auth.findUserById(user.id);
 
+            if (!authInfo.status || !authInfo.data) {
+                return res.status(404).json({ message: 'Người dùng không tồn tại' });
+            }
+
+            // TH: Thành viên tự rời nhóm
             if (memberId === user.id) {
-                const result = await member.removeMember(parseInt(conversationId), user.id);
+                const result = await member.removeMember(conversationId, user.id);
                 if (!result.status) {
                     return res.status(400).json(result);
                 }
+
+                // Tạo tin nhắn hệ thống
+                const systemMessage = new MessageModel();
+                systemMessage.conversation_id = conversationId;
+                systemMessage.sender_id = user.id; // hoặc user hệ thống nếu có
+                systemMessage.content = `${authInfo.data.fullname} đã rời khỏi cuộc trò chuyện`;
+                systemMessage.type = MessageType.SYSTEM; // giả sử bạn có enum này
+
+                await systemMessage.create();
+
                 socketService.emitToConversation(conversationId, 'member_removed', {
-                    conversationId: parseInt(conversationId),
-                    message: `${authInfo.data.fullname} đã rời khỏi cuộc trò chuyện`,
+                    conversationId,
+                    message: systemMessage.content,
                 });
 
-                socketService.emitToUser(user.id, 'removed_from_conversation', {
-                    conversationId: parseInt(conversationId),
-                });
+                socketService.emitToUser(user.id, 'removed_from_conversation', { conversationId });
+
                 return res.status(200).json(result);
             }
 
-            // Kiểm tra quyền admin
-            const isAdmin = await member.isAdmin(parseInt(conversationId), user.id);
+            // TH: Admin xoá thành viên khác
+            const isAdmin = await member.isAdmin(conversationId, user.id);
             if (!isAdmin.data) {
                 return res.status(403).json({
                     status: false,
@@ -497,18 +524,28 @@ export class ConversationsController {
                 });
             }
 
-            const result = await member.removeMember(parseInt(conversationId), parseInt(memberId));
+            const removedUser = await auth.findUserById(memberId);
+            if (!removedUser.status || !removedUser.data) {
+                return res.status(404).json({ message: 'Thành viên cần xoá không tồn tại' });
+            }
+
+            const result = await member.removeMember(conversationId, memberId);
             if (result.status) {
-                // Thông báo cho các thành viên khác
+                // Tạo tin nhắn hệ thống
+                const systemMessage = new MessageModel();
+                systemMessage.conversation_id = conversationId;
+                systemMessage.sender_id = user.id; // admin xoá thành viên
+                systemMessage.content = `${removedUser.data.fullname} được ${authInfo.data.fullname} xoá khỏi cuộc trò chuyện`;
+                systemMessage.type = MessageType.SYSTEM;
+
+                await systemMessage.create();
+
                 socketService.emitToConversation(conversationId, 'member_removed', {
-                    conversationId: parseInt(conversationId),
-                    message: `${result.data.fullname} được ${authInfo.data.fullname} xoá khỏi cuộc trò chuyện`,
+                    conversationId,
+                    message: systemMessage.content,
                 });
 
-                // Thông báo cho thành viên bị xóa
-                socketService.emitToUser(memberId, 'removed_from_conversation', {
-                    conversationId: parseInt(conversationId),
-                });
+                socketService.emitToUser(memberId, 'removed_from_conversation', { conversationId });
             }
 
             return res.status(200).json(result);
@@ -517,43 +554,6 @@ export class ConversationsController {
         }
     }
 
-    async updateMemberRole(req: any, res: any) {
-        try {
-            const { conversationId, memberId } = req.params;
-            const { role } = req.body;
-            const { user } = req;
-
-            const member = new ConversationMemberModel();
-
-            // Kiểm tra quyền admin
-            const isAdmin = await member.isAdmin(parseInt(conversationId), user.id);
-            if (!isAdmin.data) {
-                return res.status(403).json({
-                    status: false,
-                    message: 'Only admin can update member roles'
-                });
-            }
-
-            const result = await member.updateRole(parseInt(conversationId), parseInt(memberId), role);
-            if (result.status) {
-                // Thông báo cho các thành viên
-                socketService.emitToConversation(conversationId, 'member_role_updated', {
-                    conversationId: parseInt(conversationId),
-                    updatedBy: {
-                        id: user.id,
-                        name: user.fullname,
-                        avatar: user.avatar
-                    },
-                    memberId: parseInt(memberId),
-                    newRole: role
-                });
-            }
-
-            return res.status(200).json(result);
-        } catch (error: any) {
-            return res.status(500).json({ message: error.message });
-        }
-    }
 
     async updateLastSeen(req: any, res: any) {
         try {
@@ -703,7 +703,7 @@ export class ConversationsController {
             const { conversationId, memberId } = req.params;
             const { nickname } = req.body;
             const { user } = req;
-            
+
             // Check if user is member of conversation
             const member = new ConversationMemberModel();
             const isMember = await member.isMember(parseInt(conversationId), user.id);
@@ -723,6 +723,44 @@ export class ConversationsController {
             socketService.emitToConversation(parseInt(conversationId), 'nickname_updated', {
                 ...result.data,
             })
+            return res.status(200).json(result);
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
+    async updateMemberRole(req: any, res: any) {
+        try {
+            const { conversationId, memberId } = req.params;
+            const { role } = req.body;
+            const { user } = req;
+
+            const member = new ConversationMemberModel();
+
+            // Kiểm tra quyền admin
+            const isAdmin = await member.isAdmin(parseInt(conversationId), user.id);
+            if (!isAdmin.data) {
+                return res.status(403).json({
+                    status: false,
+                    message: 'Only admin can update member roles'
+                });
+            }
+
+            const result = await member.updateRole(parseInt(conversationId), parseInt(memberId), role);
+            if (result.status) {
+                // Thông báo cho các thành viên
+                socketService.emitToConversation(conversationId, 'member_role_updated', {
+                    conversationId: parseInt(conversationId),
+                    updatedBy: {
+                        id: user.id,
+                        name: user.fullname,
+                        avatar: user.avatar
+                    },
+                    memberId: parseInt(memberId),
+                    newRole: role
+                });
+            }
+
             return res.status(200).json(result);
         } catch (error: any) {
             return res.status(500).json({ message: error.message });
