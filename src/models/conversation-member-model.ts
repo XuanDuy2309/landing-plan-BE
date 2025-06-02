@@ -69,65 +69,13 @@ export class ConversationMemberModel {
     async getConversationsByUserId(userId: number, page: number = 1, limit: number = 20, search?: string) {
         try {
             const offset = (page - 1) * limit;
-            let query = `
-                SELECT 
-                    c.*,
-                    (
-                        SELECT JSON_OBJECT(
-                            'id', m2.id,
-                            'content', m2.content,
-                            'type', m2.type,
-                            'created_at', m2.created_at,
-                            'sender_id', u2.id,
-                            'sender_name', u2.fullname,
-                            'sender_avatar', u2.avatar,
-                            'sender_nickname', cm2.nickname
-                        )
-                        FROM messages m2 
-                        JOIN conversation_members cm2 ON m2.sender_id = cm2.user_id AND m2.conversation_id = cm2.conversation_id
-                        JOIN users u2 ON m2.sender_id = u2.id
-                        WHERE m2.conversation_id = c.id 
-                        ORDER BY m2.created_at DESC 
-                        LIMIT 1
-                    ) as last_message,
-                    (
-                        SELECT COUNT(*)
-                        FROM messages msg
-                        WHERE msg.conversation_id = c.id
-                        AND msg.sender_id != ?
-                        AND msg.id NOT IN (
-                            SELECT message_id 
-                            FROM message_reads 
-                            WHERE user_id = ?
-                        )
-                    ) as unread_count,
-                    (
-                        SELECT JSON_ARRAYAGG(
-                            JSON_OBJECT(
-                                'id', u2.id,
-                                'fullname', u2.fullname,
-                                'avatar', u2.avatar
-                            )
-                        )
-                        FROM conversation_members cm3
-                        JOIN users u2 ON cm3.user_id = u2.id
-                        WHERE cm3.conversation_id = c.id
-                    ) as members
-                FROM conversations c
-                JOIN conversation_members cm ON c.id = cm.conversation_id
-                JOIN conversation_members cm2 ON c.id = cm2.conversation_id
-                JOIN users u ON cm2.user_id = u.id
-                WHERE c.id IN (
-                    SELECT conversation_id 
-                    FROM conversation_members 
-                    WHERE user_id = ?
-                )
-            `;
 
-            const params: any[] = [userId, userId, userId];
+            const params: any[] = [userId, userId, userId]; // unread_count và main query
 
+            let searchFilter = '';
             if (search) {
-                query += ` AND (
+                searchFilter = `
+                AND (
                     c.name LIKE ? OR 
                     EXISTS (
                         SELECT 1 FROM users u2 
@@ -135,38 +83,89 @@ export class ConversationMemberModel {
                         WHERE cm3.conversation_id = c.id 
                         AND u2.fullname LIKE ?
                     )
-                )`;
+                )
+            `;
                 params.push(`%${search}%`, `%${search}%`);
             }
 
-            query += `
-                GROUP BY c.id
-                ORDER BY 
-                    COALESCE(
-                        (
-                            SELECT m2.created_at
-                            FROM messages m2
-                            WHERE m2.conversation_id = c.id
-                            ORDER BY m2.created_at DESC
-                            LIMIT 1
-                        ),
-                        c.updated_at,
-                        c.created_at
-                    ) DESC
-                LIMIT ? OFFSET ?
-            `;
+            const query = `
+            SELECT 
+                c.*,
+                (
+                    SELECT JSON_OBJECT(
+                        'id', m2.id,
+                        'content', m2.content,
+                        'type', m2.type,
+                        'created_at', m2.created_at,
+                        'sender_id', u2.id,
+                        'sender_name', u2.fullname,
+                        'sender_avatar', u2.avatar,
+                        'sender_nickname', cm2.nickname
+                    )
+                    FROM messages m2 
+                    JOIN users u2 ON m2.sender_id = u2.id
+                    LEFT JOIN conversation_members cm2 ON m2.sender_id = cm2.user_id AND m2.conversation_id = cm2.conversation_id
+                    WHERE m2.conversation_id = c.id 
+                    ORDER BY m2.created_at DESC 
+                    LIMIT 1
+                ) AS last_message,
+
+                (
+                    SELECT COUNT(*)
+                    FROM messages msg
+                    WHERE msg.conversation_id = c.id
+                    AND msg.sender_id != ?
+                    AND msg.id NOT IN (
+                        SELECT message_id 
+                        FROM message_reads 
+                        WHERE user_id = ?
+                    )
+                ) AS unread_count,
+
+                (
+                    SELECT JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'id', u.id,
+                            'fullname', u.fullname,
+                            'avatar', u.avatar,
+                            'nickname', cm.nickname
+                        )
+                    )
+                    FROM conversation_members cm
+                    JOIN users u ON cm.user_id = u.id
+                    WHERE cm.conversation_id = c.id
+                ) AS members
+
+            FROM conversations c
+            JOIN conversation_members cm ON cm.conversation_id = c.id
+            WHERE cm.user_id = ?
+            ${searchFilter}
+            ORDER BY (
+                SELECT m.created_at 
+                FROM messages m 
+                WHERE m.conversation_id = c.id 
+                ORDER BY m.created_at DESC 
+                LIMIT 1
+            ) DESC, c.updated_at DESC
+            LIMIT ? OFFSET ?
+        `;
+
             params.push(limit, offset);
 
-            // Get conversations with pagination
             const [rows]: any = await pool.query(query, params);
 
-            // Get total count for pagination
-            const [totalResult]: any = await pool.query(`
-                SELECT COUNT(DISTINCT c.id) as total
-                FROM conversations c
-                JOIN conversation_members cm ON c.id = cm.conversation_id
-                WHERE cm.user_id = ?
-                ${search ? `AND (
+            // Total count for pagination
+            const countParams: any = [userId];
+            let countQuery = `
+            SELECT COUNT(DISTINCT c.id) as total
+            FROM conversations c
+            JOIN conversation_members cm ON cm.conversation_id = c.id
+            WHERE cm.user_id = ?
+        `;
+
+            if (search) {
+                countQuery += `
+                AND (
                     c.name LIKE ? OR 
                     EXISTS (
                         SELECT 1 FROM users u2 
@@ -174,17 +173,23 @@ export class ConversationMemberModel {
                         WHERE cm3.conversation_id = c.id 
                         AND u2.fullname LIKE ?
                     )
-                )` : ''}
-            `, search ? [userId, `%${search}%`, `%${search}%`] : [userId]);
+                )
+            `;
+                countParams.push(`%${search}%`, `%${search}%`);
+            }
+
+            const [totalResult]: any = await pool.query(countQuery, countParams);
+            const total = totalResult[0]?.total || 0;
 
             return {
                 status: true,
                 data: rows,
-                total: totalResult[0].total,
+                total,
                 currentPage: page,
-                totalPages: Math.ceil(totalResult[0].total / limit),
+                totalPages: Math.ceil(total / limit),
                 message: 'Conversations retrieved successfully'
             };
+
         } catch (err: any) {
             return {
                 status: false,
@@ -193,6 +198,7 @@ export class ConversationMemberModel {
             };
         }
     }
+
 
     async getMembersByConversationId(conversationId: number) {
         try {
@@ -472,7 +478,8 @@ export class ConversationMemberModel {
             const [result]: any = await pool.query(`
                 SELECT u.id,
                 u.fullname,
-                cm.nickname
+                cm.nickname,
+                cm.conversation_id
                 FROM conversation_members cm
                 JOIN users u ON cm.user_id = u.id
                 WHERE cm.conversation_id = ? AND cm.user_id = ?
