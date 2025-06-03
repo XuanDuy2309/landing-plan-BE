@@ -82,7 +82,10 @@ export class ConversationsModel {
                         JSON_OBJECT(
                             'id', u3.id,
                             'fullname', u3.fullname,
-                            'avatar', u3.avatar
+                            'avatar', u3.avatar,
+                            'nickname', cm3.nickname,
+                            'muted_until', cm3.muted_until,
+                            'role', cm3.role
                         )
                     )
                     FROM conversation_members cm3
@@ -100,7 +103,7 @@ export class ConversationsModel {
                 return {
                     status: false,
                     data: null,
-                    message: 'Conversation not found'
+                    message: 'Cuộc trò chuyện không tồn tại'
                 };
             }
 
@@ -131,7 +134,7 @@ export class ConversationsModel {
 
             return {
                 status: true,
-                message: 'Conversation updated successfully'
+                message: 'Cập nhật cuộc trò chuyện thành công'
             };
         } catch (err: any) {
             return {
@@ -212,7 +215,7 @@ export class ConversationsModel {
                 return {
                     status: false,
                     data: null,
-                    message: 'Missing conversation ID'
+                    message: 'Id không được để trống'
                 };
             }
 
@@ -233,7 +236,7 @@ export class ConversationsModel {
                 return {
                     status: false,
                     data: null,
-                    message: 'No fields to update'
+                    message: 'Không có gì thay đổi'
                 };
             }
 
@@ -263,7 +266,7 @@ export class ConversationsModel {
             return {
                 status: true,
                 data: result,
-                message: 'Conversation deleted successfully'
+                message: 'Xoá thành công cuộc trò chuyện'
             };
         } catch (err: any) {
             return {

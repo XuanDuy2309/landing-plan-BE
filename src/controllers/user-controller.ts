@@ -45,10 +45,10 @@ export class UserController {
     async create(req: any, res: any) {
         const { username, password, confirm_password, fullname, phone_number, address, dob, gender, email, avatar, role, status } = req.body;
         if (!username || !password || !fullname || !phone_number || !email || !confirm_password) {
-            return res.status(400).json({ message: 'Missing required fields' });
+            return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
         }
         if (password !== req.body.confirm_password) {
-            return res.status(400).json({ message: 'Password and confirm password do not match' });
+            return res.status(400).json({ message: 'Xác nhận mật khẩu không khớp' });
         }
         const user = new UserModel();
         const auth = new AuthController();
@@ -114,17 +114,17 @@ export class UserController {
         const userTemp = new UserModel();
         const resUser = await userTemp.findUserById(user.id);
         if (!resUser.data) {
-            return res.status(400).json({ message: 'User not found' });
+            return res.status(400).json({ message: 'Không tìm thấy thông tin user' });
         }
         bcrypt.compare(old_password, resUser.data?.password!, async (err, result) => {
             if (err) {
                 return res.status(400).json({ message: err });
             }
             if (!result) {
-                return res.status(400).json({ message: 'Old password is incorrect' });
+                return res.status(400).json({ message: 'Mật khẩu không chính xác' });
             }
             if (new_password !== confirm_password) {
-                return res.status(400).json({ message: 'New password and confirm password do not match' });
+                return res.status(400).json({ message: 'Xác nhận mật khẩu không khớp' });
             }
             userTemp.id = user.id;
             const data = await userTemp.changePassword(new_password);
@@ -139,7 +139,7 @@ export class UserController {
             return res.status(400).json({ message: 'authentication failed' });
         }
         if (!avatar) {
-            return res.status(400).json({ message: 'image not found' });
+            return res.status(400).json({ message: 'Vui lòng tải ảnh lên' });
         }
         const userTemp = new UserModel();
         userTemp.id = user.id;
@@ -165,7 +165,7 @@ export class UserController {
             return res.status(400).json({ message: 'authentication failed' });
         }
         if (!background) {
-            return res.status(400).json({ message: 'image not found' });
+            return res.status(400).json({ message: 'Vui lòng tải ảnh lên' });
         }
         const userTemp = new UserModel();
         userTemp.id = user.id;
@@ -190,14 +190,14 @@ export class UserController {
         const auth = new AuthController();
         const resUser: any = await user.getUserByUserName(username);
         if (!resUser) {
-            return res.status(400).json({ status: false, message: 'User not found' });
+            return res.status(400).json({ status: false, message: 'Không tìm thấy thông tin user' });
         }
         bcrypt.compare(password, resUser.data?.password!, async (err, result) => {
             if (err) {
                 return res.status(400).json({ status: false, message: err });
             }
             if (!result) {
-                return res.status(400).json({ status: false, message: 'Password is incorrect' });
+                return res.status(400).json({ status: false, message: 'Mật khẩu không chính xác' });
             }
 
             const access_token = await auth.generateToken(resUser.data);
@@ -218,7 +218,7 @@ export class UserController {
                 return res.status(400).json({ message: 'authentication failed' });
             }
             if (!id) {
-                return res.status(400).json({ message: 'User not found' });
+                return res.status(400).json({ message: 'Không tìm thấy thông tin user' });
             }
             const follow = new FollowModel(user.id, id);
             const data = await follow.follow();
@@ -245,7 +245,7 @@ export class UserController {
                 return res.status(400).json({ message: 'authentication failed' });
             }
             if (!id) {
-                return res.status(400).json({ message: 'User not found' });
+                return res.status(400).json({ message: 'Không tìm thấy thông tin user' });
             }
             const follow = new FollowModel(user.id, id);
             const data = await follow.unfollow();
@@ -272,7 +272,7 @@ export class UserController {
                 return res.status(400).json({ message: 'authentication failed' });
             }
             if (!id) {
-                return res.status(400).json({ message: 'User not found' });
+                return res.status(400).json({ message: 'Không tìm thấy thông tin user' });
             }
             const follow = new FollowModel(user.id, id);
             const data = await follow.isFollowing();

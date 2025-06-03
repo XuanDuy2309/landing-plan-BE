@@ -5,7 +5,7 @@ export class BidsController {
     async getAllByPostId(req: any, res: any) {
         const { id } = req.params;
         if (!id) {
-            return res.status(400).json({ message: 'id not found' });
+            return res.status(400).json({ message: 'Id bài viết không được để trống' });
         }
         const post = new BidsModel();
         const data = await post.getAllByPostId(Number(id));
@@ -20,7 +20,7 @@ export class BidsController {
         const bidPrice = Number(price);
 
         if (!postId || !bidPrice || bidPrice <= 0) {
-            return res.status(400).json({ message: 'post_id and price must be valid' });
+            return res.status(400).json({ message: 'Thiếu thông tin' });
         }
 
         const bid = new BidsModel();
@@ -33,12 +33,12 @@ export class BidsController {
         try {
             const data = await bid.create();
             if (!data.status) {
-                return res.status(400).json({ message: 'Failed to create bid', data });
+                return res.status(400).json(data);
             }
 
             const postData: any = await post.getDetailPost(postId);
             if (!postData.status) {
-                return res.status(404).json({ message: 'Post not found' });
+                return res.status(404).json(postData);
             }
             const post_like = new PostLikeModel();
             const likesData: any = await post_like.getAllByPostId(postId);

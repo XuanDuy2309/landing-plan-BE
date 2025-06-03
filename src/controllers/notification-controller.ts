@@ -13,7 +13,7 @@ export class NotificationController {
         const { user } = req;
         const { post_id, type } = req.body;
         if (!post_id || !type) {
-            return res.status(400).json({ message: 'post_id and type are required' });
+            return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
         }
         const notification = new NotificationModel();
         Object.assign(notification, req.body);
@@ -24,7 +24,7 @@ export class NotificationController {
     async readNotification(req: any, res: any) {
         const { id } = req.params;
         if (!id) {
-            return res.status(400).json({ message: 'id not found' });
+            return res.status(400).json({ message: 'Id không được để trống' });
         }
         const notification = new NotificationModel();
         notification.id = Number(id);
@@ -35,7 +35,7 @@ export class NotificationController {
     async readAllNotification(req: any, res: any) {
         const { user } = req;
         if (!user) {
-            return res.status(400).json({ message: 'user not found' });
+            return res.status(400).json({ message: 'authentication failed' });
         }
         const notification = new NotificationModel();
         notification.receiver_id = Number(user.id);

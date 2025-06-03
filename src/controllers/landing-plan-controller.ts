@@ -7,7 +7,7 @@ export class LandingPlanController {
         const lonFloat = parseFloat(lon as string);
         const radiusFloat = radius !== undefined ? parseFloat(radius as string) : 0;
         if (isNaN(latFloat) || isNaN(lonFloat)) {
-            return res.status(400).json({ message: "Invalid latitude or longitude" });
+            return res.status(400).json({ message: "Lat,lon không được để trống" });
         }
 
         try {

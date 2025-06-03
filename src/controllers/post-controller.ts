@@ -26,7 +26,7 @@ export class PostController {
             // Get post details
             const postData: any = await post.getDetailPost(id);
             if (!postData || !postData.data) {
-                return res.status(404).json({ message: 'Post not found' });
+                return res.status(404).json(postData);
             }
 
             // Get like and share counts
@@ -65,7 +65,7 @@ export class PostController {
             const post = new PostModel();
             Object.assign(post, req.body);
             if (!id) {
-                return res.status(400).json({ message: 'id not found' });
+                return res.status(400).json({ message: 'Id không được để trống' });
             }
             post.id = Number(id);
             const data = await post.updatePost();
@@ -78,7 +78,7 @@ export class PostController {
     async delete(req: any, res: any) {
         const { id } = req.params;
         if (!id) {
-            return res.status(400).json({ message: 'id not found' });
+            return res.status(400).json({ message: 'Id không được để trống' });
         }
         const post = new PostModel();
         post.id = Number(id);
@@ -90,7 +90,7 @@ export class PostController {
         const { id } = req.params;
         const { user } = req;
         if (!id) {
-            return res.status(400).json({ message: 'id not found' });
+            return res.status(400).json({ message: 'Id không được để trống' });
         }
         const post = new PostSharingModel();
         post.post_id = Number(id);
@@ -104,7 +104,7 @@ export class PostController {
         const { user } = req;
 
         if (!id) {
-            return res.status(400).json({ message: 'id not found' });
+            return res.status(400).json({ message: 'Id không được để trống' });
         }
 
         const postLike = new PostLikeModel();
@@ -116,13 +116,13 @@ export class PostController {
             const userData: any = await userModel.findUserById(user.id);
             const postData: any = await post.getDetailPost(Number(id));
             if (!postData.status) {
-                return res.status(404).json({ message: 'Post not found' });
+                return res.status(404).json(postData);
             }
 
             // 🔒 Kiểm tra xem đã like chưa
             const existed = await postLike.findOne({ post_id: Number(id), create_by_id: user.id });
             if (existed) {
-                return res.status(200).json({ status: true, message: 'Already liked' });
+                return res.status(200).json(existed);
             }
 
             // Thêm like
@@ -157,7 +157,7 @@ export class PostController {
         const { id } = req.params;
         const { user } = req;
         if (!id) {
-            return res.status(400).json({ message: 'id not found' });
+            return res.status(400).json({ message: 'Id không được để trống' });
         }
         const post = new PostLikeModel();
         post.post_id = Number(id);
@@ -169,7 +169,7 @@ export class PostController {
     async getPostLikes(req: any, res: any) {
         const { id } = req.params;
         if (!id) {
-            return res.status(400).json({ message: 'id not found' });
+            return res.status(400).json({ message: 'Id không được để trống' });
         }
         const postLike = new PostLikeModel();
         const data = await postLike.getAllByPostId(Number(id));
@@ -192,7 +192,7 @@ export class PostController {
         const { id } = req.params;
         const { user } = req;
         if (!id) {
-            return res.status(400).json({ message: 'id not found' });
+            return res.status(400).json({ message: 'Id không được để trống' });
         }
         const postLike = new PostLikeModel();
         const data = await postLike.findOne({ post_id: Number(id), create_by_id: user.id });

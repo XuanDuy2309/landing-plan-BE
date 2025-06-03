@@ -27,7 +27,7 @@ export class ConversationMemberModel {
             return {
                 status: true,
                 data: { ...this, id: result.insertId },
-                message: 'Member added successfully'
+                message: 'Thêm thành viên vào cuộc trò chuyện thành công'
             };
         } catch (err: any) {
             return {
@@ -55,7 +55,7 @@ export class ConversationMemberModel {
             return {
                 status: true,
                 data: { affectedRows: result.affectedRows },
-                message: 'Members added successfully'
+                message: 'Thêm nhiều thành viên vào cuộc trò chuyện thành công'
             };
         } catch (err: any) {
             return {
@@ -128,7 +128,9 @@ export class ConversationMemberModel {
                             'id', u.id,
                             'fullname', u.fullname,
                             'avatar', u.avatar,
-                            'nickname', cm.nickname
+                            'nickname', cm.nickname,
+                            'muted_until', cm.muted_until,
+                            'role', cm.role
                         )
                     )
                     FROM conversation_members cm
@@ -250,7 +252,7 @@ export class ConversationMemberModel {
             return {
                 data: users[0],
                 status: true,
-                message: 'Member removed successfully'
+                message: 'Xoá thành viên khỏi cuộc trò chuyện thành công'
             };
         } catch (err: any) {
             return {
@@ -270,7 +272,7 @@ export class ConversationMemberModel {
 
             return {
                 status: true,
-                message: 'Member role updated successfully'
+                message: 'Cập nhật vai trò thành công'
             };
         } catch (err: any) {
             return {
@@ -379,7 +381,7 @@ export class ConversationMemberModel {
 
             return {
                 status: true,
-                message: muteUntil ? 'Conversation muted successfully' : 'Conversation unmuted successfully'
+                message: muteUntil ? 'Đã tắt thông báo' : 'Đã bật thông báo',
             };
         } catch (err: any) {
             return {
@@ -488,7 +490,7 @@ export class ConversationMemberModel {
             return {
                 data: result[0],
                 status: true,
-                message: 'Nickname updated successfully'
+                message: 'Cập nhật biệt danh thành công'
             };
         } catch (err: any) {
             return {

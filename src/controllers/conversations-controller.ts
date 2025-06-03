@@ -14,14 +14,14 @@ export class ConversationsController {
             if (type === ConversationType.GROUP && !name) {
                 return res.status(400).json({
                     status: false,
-                    message: 'Group name is required'
+                    message: 'Tên nhớm không được để trống'
                 });
             }
 
             if (!members || members.length === 0) {
                 return res.status(400).json({
                     status: false,
-                    message: 'At least one member is required'
+                    message: 'Thành viên không được để trống'
                 });
             }
 
@@ -95,7 +95,7 @@ export class ConversationsController {
             if (!isMember.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'You are not a member of this conversation'
+                    message: 'Bạn không phải là thành viên của cuộc trò chuyện này'
                 });
             }
 
@@ -132,7 +132,7 @@ export class ConversationsController {
             if (!isMember.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'You are not a member of this conversation'
+                    message: 'Bạn không phải là thành viên của cuộc trò chuyện này'
                 });
             }
 
@@ -287,19 +287,28 @@ export class ConversationsController {
             if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
                 return res.status(400).json({
                     status: false,
-                    message: 'Member IDs are required'
+                    message: 'Id thành viên không được để trống'
                 });
             }
 
             const member = new ConversationMemberModel();
             const conversation = new ConversationsModel();
+            const userModel = new UserModel();
+            const userInfos = await userModel.findUserById(parseInt(user.id));
+
+            if (!userInfos.status) {
+                return res.status(404).json({
+                    status: false,
+                    message: 'Không tìm thấy thông tin người thêm'
+                });
+            }
 
             // Check if current user is member of conversation
             const memberData = await member.isMember(parseInt(conversationId), user.id);
             if (!memberData.status || !memberData.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'You are not a member of this conversation'
+                    message: 'Bạn không phải là thành viên của nhóm'
                 });
             }
 
@@ -308,19 +317,19 @@ export class ConversationsController {
             if (!conversationData.status || !conversationData.data || conversationData.data.type !== ConversationType.GROUP) {
                 return res.status(400).json({
                     status: false,
-                    message: 'This is not a group conversation'
+                    message: 'Đây không phải nhóm'
                 });
             }
 
             // Add members to conversation
-            const addedMembers = await this.addMembersToConversation(parseInt(conversationId), memberIds);
+            await this.addMembersToConversation(parseInt(conversationId), memberIds);
 
             // Get full info of new members added
             const newMembersData = await member.getMembersByConversationId(parseInt(conversationId));
             if (!newMembersData.status || !newMembersData.data) {
                 return res.status(500).json({
                     status: false,
-                    message: 'Failed to get members information'
+                    message: 'Không thể lấy thông tin thành viên'
                 });
             }
 
@@ -331,39 +340,26 @@ export class ConversationsController {
             systemMessage.conversation_id = parseInt(conversationId);
             systemMessage.sender_id = user.id;  // Người thêm
             const newMemberNames = newMembers.map((m: any) => m.fullname || 'Người dùng').join(', ');
-            systemMessage.content = `${user.fullname} đã thêm ${newMemberNames} vào cuộc trò chuyện`;
+            systemMessage.content = `${userInfos.data.fullname} đã thêm ${newMemberNames} vào cuộc trò chuyện`;
             systemMessage.type = MessageType.SYSTEM;
 
-            await systemMessage.create();
+            const message = await systemMessage.create();
 
             // Thông báo cho các thành viên hiện tại về việc có thành viên mới
-            socketService.emitToConversation(conversationId, 'members_added', {
-                conversationId: parseInt(conversationId),
-                addedBy: {
-                    id: user.id,
-                    name: user.fullname,
-                    avatar: user.avatar
-                },
-                newMembers,
-                systemMessage: systemMessage.content
-            });
+            socketService.emitToConversation(conversationId, 'new_message', message.data);
+
+            const infoConversation = await conversation.getById(parseInt(conversationId));
 
             // Gửi thông báo cho các thành viên mới
             memberIds.forEach(memberId => {
-                socketService.emitToUser(memberId, 'added_to_conversation', {
-                    conversation: conversationData.data,
-                    addedBy: {
-                        id: user.id,
-                        name: user.fullname,
-                        avatar: user.avatar
-                    }
-                });
+                if (memberId === user.id) return; // Không gửi thông báo cho người thêm
+                socketService.emitToUser(memberId, 'added_to_conversation', infoConversation.data);
             });
 
             return res.status(200).json({
                 status: true,
                 data: newMembers,
-                message: 'Members added successfully'
+                message: 'Thêm thành viên thành công'
             });
 
         } catch (error: any) {
@@ -384,7 +380,7 @@ export class ConversationsController {
             if (!isMember.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'You are not a member of this conversation'
+                    message: 'Bạn không phải là thành viên của cuộc trò chuyện này'
                 });
             }
 
@@ -410,7 +406,7 @@ export class ConversationsController {
             if (!isMember.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'You are not a member of this conversation'
+                    message: 'Bạn không phải là thành viên của cuộc trò chuyện này'
                 });
             }
 
@@ -427,7 +423,7 @@ export class ConversationsController {
         try {
             const conversationId = parseInt(req.params.conversationId);
             if (isNaN(conversationId)) {
-                return res.status(400).json({ message: 'Invalid conversation ID' });
+                return res.status(400).json({ message: 'id cuộc trò chuyện không được để trống' });
             }
 
             const { user } = req;
@@ -441,7 +437,7 @@ export class ConversationsController {
             ]);
 
             if (!cInfo.status) {
-                return res.status(404).json({ message: 'Conversation not found' });
+                return res.status(404).json({ message: 'Cuộc trò chuyện không tồn tại' });
             }
 
             const isDirect = cInfo.data.type === ConversationType.DIRECT;
@@ -452,21 +448,19 @@ export class ConversationsController {
 
                 const rmConversation = await conversation.deleteConversation(conversationId);
                 if (!rmConversation.status) {
-                    return res.status(500).json({ message: rmConversation.message });
+                    return res.status(500).json(rmConversation);
                 }
 
                 // Notify other users
                 members.data?.forEach((m: any) => {
-                    if (m.id !== user.id) {
-                        socketService.emitToUser(m.id, 'conversation_deleted', {
-                            conversationId
-                        });
-                    }
+                    socketService.emitToUser(m.id, 'conversation_deleted', {
+                        id: conversationId,
+                    });
                 });
 
-                return res.status(200).json({ message: 'Conversation deleted successfully' });
+                return res.status(200).json(rmConversation);
             } else {
-                return res.status(403).json({ message: 'You do not have permission to delete this conversation' });
+                return res.status(403).json({ message: 'Bạn chưa được cấp quyền để thực hiện hành động này' });
             }
         } catch (error: any) {
             return res.status(500).json({ message: error.message });
@@ -503,14 +497,14 @@ export class ConversationsController {
                 systemMessage.content = `${authInfo.data.fullname} đã rời khỏi cuộc trò chuyện`;
                 systemMessage.type = MessageType.SYSTEM; // giả sử bạn có enum này
 
-                await systemMessage.create();
+                const message = await systemMessage.create();
 
-                socketService.emitToConversation(conversationId, 'member_removed', {
-                    conversationId,
-                    message: systemMessage.content,
-                });
+                if (!message.status) {
+                    return res.status(400).json(message);
+                }
 
-                socketService.emitToUser(user.id, 'removed_from_conversation', { conversationId });
+                socketService.emitToConversation(conversationId, 'new_message', message.data);
+                socketService.emitToConversation(conversationId, 'leave_conversation', message.data);
 
                 return res.status(200).json(result);
             }
@@ -538,14 +532,12 @@ export class ConversationsController {
                 systemMessage.content = `${removedUser.data.fullname} được ${authInfo.data.fullname} xoá khỏi cuộc trò chuyện`;
                 systemMessage.type = MessageType.SYSTEM;
 
-                await systemMessage.create();
+                const message = await systemMessage.create();
 
-                socketService.emitToConversation(conversationId, 'member_removed', {
-                    conversationId,
-                    message: systemMessage.content,
-                });
+                if (!message.status) return res.status(404).json(message)
 
-                socketService.emitToUser(memberId, 'removed_from_conversation', { conversationId });
+                socketService.emitToConversation(conversationId, 'new_message', message.data);
+                socketService.emitToConversation(conversationId, 'leave_conversation', message.data);
             }
 
             return res.status(200).json(result);
@@ -567,7 +559,7 @@ export class ConversationsController {
             if (!isMember.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'You are not a member of this conversation'
+                    message: 'Bạn không phải là thành viên của cuộc trò chuyện này'
                 });
             }
 
@@ -591,7 +583,7 @@ export class ConversationsController {
             if (!isMember.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'You are not a member of this conversation'
+                    message: 'Bạn không phải là thành viên của cuộc trò chuyện này'
                 });
             }
 
@@ -617,7 +609,7 @@ export class ConversationsController {
             if (!isMember.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'You are not a member of this conversation'
+                    message: 'Bạn không phải là thành viên của cuộc trò chuyện này'
                 });
             }
 
@@ -648,7 +640,7 @@ export class ConversationsController {
             if (!isMember.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'You are not a member of this conversation'
+                    message: 'Bạn không phải là thành viên của cuộc trò chuyện này'
                 });
             }
 
@@ -711,7 +703,7 @@ export class ConversationsController {
             if (!isMember.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'You are not a member of this conversation'
+                    message: 'Bạn không phải là thành viên của cuộc trò chuyện này'
                 });
             }
 
@@ -742,7 +734,7 @@ export class ConversationsController {
             if (!isAdmin.data) {
                 return res.status(403).json({
                     status: false,
-                    message: 'Only admin can update member roles'
+                    message: 'Chỉ quản trị viên mới có thế thay đổi vai trò của thành viên'
                 });
             }
 

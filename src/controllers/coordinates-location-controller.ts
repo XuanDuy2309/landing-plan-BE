@@ -29,7 +29,7 @@ export class CoordinatesLocationController {
         const lonFloat = parseFloat(lon as string);
 
         if (isNaN(latFloat) || isNaN(lonFloat)) {
-            return res.status(400).json({ message: "Invalid latitude or longitude" });
+            return res.status(400).json({ message: "Lat, lon không được để trống" });
         }
 
         try {
