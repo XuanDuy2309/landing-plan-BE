@@ -198,4 +198,15 @@ export class PostController {
         const data = await postLike.findOne({ post_id: Number(id), create_by_id: user.id });
         return res.status(200).json(data);
     }
+
+    async getListLandingTypes(req: any, res: any) {
+        const post = new PostModel();
+        const { query } = req.query;
+        try {
+            const data: any = await post.getListTypePost(query);
+            return res.status(200).json(data);
+        } catch (err: any) {
+            return res.status(400).json({ message: err.message || 'Failed to fetch landing types' });
+        }
+    }
 }

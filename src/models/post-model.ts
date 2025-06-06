@@ -48,6 +48,7 @@ export class PostModel {
     type: Type_Post = Type_Post.Public
     purpose: Purpose_Post = Purpose_Post.For_Sell
     type_asset?: Type_Asset_Enum = Type_Asset_Enum.Home
+    type_landing_id?: number
     status?: Status_Post = Status_Post.Coming_Soon
     image_links?: string
     video_links?: string
@@ -107,6 +108,13 @@ export class PostModel {
             const placeholders = purposes.map(() => '?').join(',');
             filterConditions.push(`purpose IN (${placeholders})`);
             queryParams.push(...purposes);
+        }
+
+        if (filters.type_landing_id && filters.type_landing_id.length > 0) {
+            const typeLandingIds = filters.type_landing_id.split(',');
+            const placeholders = typeLandingIds.map(() => '?').join(',');
+            filterConditions.push(`type_landing_id IN (${placeholders})`);
+            queryParams.push(...typeLandingIds);
         }
 
         if (filters.type_asset && filters.type_asset.length > 0) {
@@ -373,9 +381,13 @@ export class PostModel {
                     u.phone_number AS create_by_phone,
                     u.avatar AS create_by_avatar,
                     (SELECT GROUP_CONCAT(lp.create_by_id) FROM post_likes lp WHERE lp.post_id = p.id) AS like_by_ids,
-                    (SELECT COUNT(*) FROM post_sharing sp WHERE sp.post_id = p.id) AS share_count
+                    (SELECT COUNT(*) FROM post_sharing sp WHERE sp.post_id = p.id) AS share_count,
+                    t.name AS type_landing_name,
+                    t.code AS type_landing_code,
+                    t.color AS type_landing_color
                 FROM posts p
                 LEFT JOIN users u ON p.create_by_id = u.id
+                LEFT JOIN land_types t ON p.type_landing_id = t.id
                 ${whereClause}
                 ${orderByClause}
                 LIMIT ? OFFSET ?
@@ -416,9 +428,13 @@ export class PostModel {
                     u.email AS create_by_email,
                     u.phone_number AS create_by_phone,
                     u.avatar AS create_by_avatar,
+                    t.name AS type_landing_name,
+                    t.code AS type_landing_code,
+                    t.color AS type_landing_color,
                     (SELECT GROUP_CONCAT(lp.create_by_id) FROM post_likes lp WHERE lp.post_id = p.id) AS like_by_ids,
                     (SELECT COUNT(*) FROM post_sharing sp WHERE sp.post_id = p.id) AS share_count
                 FROM posts p
+                LEFT JOIN land_types t ON p.type_landing_id = t.id
                 LEFT JOIN users u ON p.create_by_id = u.id
                 WHERE p.id = ?
             `;
@@ -506,9 +522,13 @@ export class PostModel {
                     u.fullname AS create_by_name,
                     u.email AS create_by_email,
                     u.avatar AS create_by_avatar,
+                    t.name AS type_landing_name,
+                    t.code AS type_landing_code,
+                    t.color AS type_landing_color,
                     (SELECT GROUP_CONCAT(lp.create_by_id) FROM post_likes lp WHERE lp.post_id = p.id) AS like_by_ids,
                     (SELECT GROUP_CONCAT(ps.create_by_id) FROM post_sharing ps WHERE ps.post_id = p.id) AS share_by_ids
                 FROM posts p
+                LEFT JOIN land_types t ON p.type_landing_id = t.id
                 LEFT JOIN users u ON p.create_by_id = u.id
                 JOIN (
                     SELECT post_id FROM post_likes WHERE create_by_id = ?
@@ -560,5 +580,21 @@ export class PostModel {
             console.error('SQL Error:', err.message);
             return { data: null, status: false, message: err.message || 'Failed to fetch liked and shared posts' };
         }
+    }
+
+    async getListTypePost(query: string = '') {
+        try {
+            const sql = `
+                SELECT id, name, code, color
+                FROM land_types
+                WHERE name LIKE ? OR code LIKE ?
+                ORDER BY id ASC
+            `;
+            const [rows]: any = await pool.query(sql, [`%${query}%`, `%${query}%`]);
+            return { data: rows, status: true, message: "success" };
+        } catch (err: any) {
+            return { data: null, status: false, message: err.message || "Failed to fetch land types" };
+        }
+
     }
 }

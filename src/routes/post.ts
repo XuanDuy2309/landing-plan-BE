@@ -7,6 +7,7 @@ export const PostRouter = express.Router();
 const postController = new PostController();
 
 PostRouter.get("/", authMiddleware, postController.index);
+PostRouter.get("/type", authMiddleware, postController.getListLandingTypes);
 PostRouter.get("/folowings", authMiddleware, postController.getPostFolowings);
 PostRouter.get("/:id", authMiddleware, postController.show);
 PostRouter.post("/", authMiddleware, validateData(postSchema), postController.store);
