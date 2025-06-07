@@ -110,8 +110,8 @@ export class PostModel {
             queryParams.push(...purposes);
         }
 
-        if (filters.type_landing_id && filters.type_landing_id.length > 0) {
-            const typeLandingIds = filters.type_landing_id.split(',');
+        if (filters.type_landing_ids && filters.type_landing_ids.length > 0) {
+            const typeLandingIds = filters.type_landing_ids.split(',');
             const placeholders = typeLandingIds.map(() => '?').join(',');
             filterConditions.push(`type_landing_id IN (${placeholders})`);
             queryParams.push(...typeLandingIds);
