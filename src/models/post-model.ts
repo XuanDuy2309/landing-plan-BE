@@ -335,6 +335,11 @@ export class PostModel {
             values.push(`?`);
             params.push(this.update_at);
         }
+        if (this.type_landing_id) {
+            fields.push(`type_landing_id`);
+            values.push(`?`);
+            params.push(this.type_landing_id);
+        }
         return {
             fields,
             values,
@@ -467,6 +472,8 @@ export class PostModel {
             fields.push(`create_at`);
             values.push(`?`);
             params.push(this.create_at);
+
+            console.log("fields", fields);
 
             const query = `INSERT INTO posts (${fields.join(", ")}) VALUES (${values.join(", ")})`;
             const [rows]: any = await pool.query(query, params);
