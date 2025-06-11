@@ -25,6 +25,7 @@ router.patch('/:conversationId/last-seen', authMiddleware, controller.updateLast
 
 // Message routes
 router.get('/:conversationId/messages', authMiddleware, controller.getMessages.bind(controller));
+router.get('/:conversationId/media', authMiddleware, controller.getListMediaByConversationID.bind(controller));
 router.post('/:conversationId/messages', authMiddleware, controller.sendMessage.bind(controller));
 router.put('/:conversationId/messages/:messageId', authMiddleware, controller.editMessage.bind(controller));
 router.delete('/:conversationId/messages/:messageId', authMiddleware, controller.deleteMessage.bind(controller));

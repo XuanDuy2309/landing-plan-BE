@@ -759,6 +759,20 @@ export class ConversationsController {
         }
     }
 
+    async getListMediaByConversationID(req: any, res: any) {
+        try {
+            const { conversationId } = req.params;
+            if (!conversationId) {
+                return res.status(400).json({ message: 'conversationId is required' });
+            }
+            const messageModel = new MessageModel();
+            const result = await messageModel.getAllImageOrVideoMessages(parseInt(conversationId));
+            return res.status(200).json(result);
+        } catch (error: any) {
+            return res.status(500).json({ message: error.message });
+        }
+    }
+
     private async addMembersToConversation(conversationId: number, memberIds: number[], creatorId?: number) {
         const memberModel = new ConversationMemberModel();
         const promises = memberIds.map(userId => {
@@ -770,4 +784,6 @@ export class ConversationsController {
 
         return Promise.all(promises);
     }
+
+
 }

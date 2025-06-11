@@ -25,6 +25,7 @@ export const enum MessageType {
     VIDEO_CALL = 'video_call',
     MENTION = 'mention',
     SYSTEM = 'system',
+    VIDEO = 'video'
 }
 
 export const enum MessageStatus {
@@ -351,6 +352,27 @@ export class MessageModel {
                 status: true,
                 data: message[0],
                 message: 'Message retrieved successfully'
+            };
+        } catch (err: any) {
+            return {
+                status: false,
+                data: null,
+                message: err.message
+            };
+        }
+    }
+
+    async getAllImageOrVideoMessages(conversationId: number) {
+        try {
+            const [messages]: any = await pool.query(
+                'SELECT * FROM messages WHERE conversation_id = ? AND (type = ? OR type = ?)',
+                [conversationId, MessageType.IMAGE, MessageType.VIDEO]
+            );
+
+            return {
+                status: true,
+                data: messages,
+                message: 'Messages retrieved successfully'
             };
         } catch (err: any) {
             return {

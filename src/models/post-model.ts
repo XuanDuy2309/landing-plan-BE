@@ -533,7 +533,7 @@ export class PostModel {
                     t.code AS type_landing_code,
                     t.color AS type_landing_color,
                     (SELECT GROUP_CONCAT(lp.create_by_id) FROM post_likes lp WHERE lp.post_id = p.id) AS like_by_ids,
-                    (SELECT GROUP_CONCAT(ps.create_by_id) FROM post_sharing ps WHERE ps.post_id = p.id) AS share_by_ids
+                    (SELECT count(*) FROM post_sharing ps WHERE ps.post_id = p.id) AS share_by_ids
                 FROM posts p
                 LEFT JOIN land_types t ON p.type_landing_id = t.id
                 LEFT JOIN users u ON p.create_by_id = u.id
