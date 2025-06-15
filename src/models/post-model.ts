@@ -368,8 +368,34 @@ export class PostModel {
         }
     }
 
+    async getAll() {
+        try {
+            const [rows]: any = await pool.query(`SELECT 
+                p.*,
+                t.name AS type_landing_name,
+                t.code AS type_landing_code,
+                t.color AS type_landing_color
+                FROM posts p
+                LEFT JOIN land_types t ON p.type_landing_id = t.id
+                `);
+            return {
+                data: rows.map((row: any) => ({
+                    ...row,
+                    coordinates: row.coordinates ? (row.coordinates[0] as { x: number; y: number }[]).map((coord: { x: number; y: number }) => [coord.x, coord.y]) : [],
+                    image_links: row.image_links ? JSON.parse(row.image_links) : [],
+                    video_links: row.video_links ? JSON.parse(row.video_links) : [],
+                })),
+                status: true,
+                message: 'success',
+            };
+        } catch (error: any) {
+            return { data: null, status: false, message: error.message || 'Failed to fetch posts' };
 
-    async getAll(page: number = 1, page_size: number = 10, filters: any = {}) {
+        }
+    }
+
+
+    async getListPost(page: number = 1, page_size: number = 10, filters: any = {}) {
         const pageTemp = Number(page)
         const pageSize = Number(page_size)
         const offset = (pageTemp - 1) * pageSize;
@@ -533,7 +559,7 @@ export class PostModel {
                     t.code AS type_landing_code,
                     t.color AS type_landing_color,
                     (SELECT GROUP_CONCAT(lp.create_by_id) FROM post_likes lp WHERE lp.post_id = p.id) AS like_by_ids,
-                    (SELECT count(*) FROM post_sharing ps WHERE ps.post_id = p.id) AS share_by_ids
+                    (SELECT count(*) FROM post_sharing ps WHERE ps.post_id = p.id) AS share_count
                 FROM posts p
                 LEFT JOIN land_types t ON p.type_landing_id = t.id
                 LEFT JOIN users u ON p.create_by_id = u.id
@@ -572,7 +598,6 @@ export class PostModel {
                     video_links: row.video_links ? JSON.parse(row.video_links) : [],
                     image_links: row.image_links ? JSON.parse(row.image_links) : [],
                     like_by_ids: row.like_by_ids ? row.like_by_ids.split(',').map(Number) : [],
-                    share_by_ids: row.share_by_ids ? row.share_by_ids.split(',').map(Number) : [],
                     name: row.create_by_name,
                     email: row.create_by_email,
                     avatar: row.create_by_avatar,

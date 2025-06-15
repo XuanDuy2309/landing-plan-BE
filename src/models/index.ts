@@ -5,6 +5,7 @@ export * from './conversations-model';
 export * from './coordinates-location-model';
 export * from './district-model';
 export * from './follow-model';
+export * from './land-zone-model';
 export * from './landing-plan-model';
 export * from './message-model';
 export * from './notification-model';
@@ -15,3 +16,4 @@ export * from './province-model';
 export * from './uploads-model';
 export * from './user-model';
 export * from './ward-model';
+

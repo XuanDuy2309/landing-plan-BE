@@ -6,6 +6,7 @@ import ChatbotRouter from "./chat-bot";
 import ConversationRouter from "./conversation";
 import CoordinateLocationRoute from "./coordinate-location";
 import { DistrictRouter } from "./district";
+import { LandZoneRouter } from "./land-zone";
 import LandingPlanRoute from "./landing-plan";
 import { NotificationRouter } from "./notification";
 import { PostRouter } from "./post";
@@ -30,4 +31,5 @@ export const Route = (app: any) => {
     app.use('/notification', NotificationRouter);
     app.use('/conversations', ConversationRouter);
     app.use('/chat-bot', ChatbotRouter);
+    app.use('/land-zones', LandZoneRouter)
 };
