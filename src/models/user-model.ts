@@ -77,7 +77,7 @@ export class UserModel {
 
             // Truy vấn chính
             const query = `
-                SELECT 
+                SELECT
                     u.*,
                     (SELECT GROUP_CONCAT(following_id) FROM follows WHERE follower_id = u.id) AS following_ids,
                     (SELECT GROUP_CONCAT(follower_id) FROM follows WHERE following_id = u.id) AS follower_ids
@@ -118,11 +118,11 @@ export class UserModel {
     async findUserById(id?: number) {
         try {
             const [rows]: any = await pool.query(`
-    SELECT 
-        u.*, 
+    SELECT
+        u.*,
         (SELECT GROUP_CONCAT(following_id) FROM follows WHERE follower_id = u.id) AS following_ids,
         (SELECT GROUP_CONCAT(follower_id) FROM follows WHERE following_id = u.id) AS follower_ids
-    FROM users u 
+    FROM users u
     WHERE u.id = ?
 `, [id]);
 
@@ -143,15 +143,15 @@ export class UserModel {
         try {
             let [rows]: any = await pool.query('SELECT * FROM users WHERE username = ?', [this.username]);
             if (rows.length > 0) {
-                return { status: true, message: "Invalid username" }
+                return { status: true, message: "Username đã được sử dụng" }
             }
-            [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [this.email]);
-            if (rows.length > 0) {
-                return { status: true, message: "Invalid email" }
-            }
+            // [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [this.email]);
+            // if (rows.length > 0) {
+            //     return { status: true, message: "Email đã được sử dụng" }
+            // }
             [rows] = await pool.query('SELECT * FROM users WHERE phone_number = ?', [this.phone_number]);
             if (rows.length > 0) {
-                return { status: true, message: "Invalid phone_number" }
+                return { status: true, message: "Số điện thoại đã được sử dụng" }
             }
             return { status: false, message: "success" }
         } catch (err) {

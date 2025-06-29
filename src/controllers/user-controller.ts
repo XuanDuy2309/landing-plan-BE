@@ -44,7 +44,7 @@ export class UserController {
 
     async create(req: any, res: any) {
         const { username, password, confirm_password, fullname, phone_number, address, dob, gender, email, avatar, role, status } = req.body;
-        if (!username || !password || !fullname || !phone_number || !email || !confirm_password) {
+        if (!username || !password || !fullname || !phone_number || !confirm_password) {
             return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
         }
         if (password !== req.body.confirm_password) {
