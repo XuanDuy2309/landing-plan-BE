@@ -45,11 +45,9 @@ export enum Type_Asset_Enum {
 
 export class PostModel {
     id?: number
-    type: Type_Post = Type_Post.Public
     purpose: Purpose_Post = Purpose_Post.For_Sell
     type_asset?: Type_Asset_Enum = Type_Asset_Enum.Home
     type_landing_id?: number
-    status?: Status_Post = Status_Post.Coming_Soon
     image_links?: string
     video_links?: string
     coordinates?: string
@@ -170,11 +168,6 @@ export class PostModel {
         let fields: string[] = [];
         let values: string[] = [];
         let params: any[] = [];
-        if (this.type) {
-            fields.push(`type`);
-            values.push(`?`);
-            params.push(this.type);
-        }
         if (this.purpose) {
             fields.push(`purpose`);
             values.push(`?`);
@@ -184,11 +177,6 @@ export class PostModel {
             fields.push(`type_asset`);
             values.push(`?`);
             params.push(this.type_asset);
-        }
-        if (this.status) {
-            fields.push(`status`);
-            values.push(`?`);
-            params.push(this.status);
         }
         if (this.image_links) {
             fields.push(`image_links`);
