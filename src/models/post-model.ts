@@ -336,6 +336,23 @@ export class PostModel {
     }
 
     private toWKTFromCoordinates(coords: [number, number][]): string {
+        // If input is a WKT string, return as is
+        if (typeof coords === 'string' &&
+            (/^POINT\s*\(.+\)$/i.test(coords) ||
+             /^LINESTRING\s*\(.+\)$/i.test(coords) ||
+             /^POLYGON\s*\(\(.+\)\)$/i.test(coords))) {
+            return coords;
+        }
+        // Validate input
+        if (!Array.isArray(coords) || coords.length === 0) {
+            throw new Error(`Tọa độ không hợp lệ để tạo WKT: input is not a non-empty array. Received: ${JSON.stringify(coords)}`);
+        }
+        // Ensure all coordinates are valid numbers
+        for (const pair of coords) {
+            if (!Array.isArray(pair) || pair.length !== 2 || typeof pair[0] !== 'number' || typeof pair[1] !== 'number' || isNaN(pair[0]) || isNaN(pair[1])) {
+                throw new Error(`Tọa độ không hợp lệ để tạo WKT: invalid pair ${JSON.stringify(pair)} in ${JSON.stringify(coords)}`);
+            }
+        }
         if (coords.length === 1) {
             const [lng, lat] = coords[0];
             return `POINT(${lng} ${lat})`;
@@ -344,12 +361,17 @@ export class PostModel {
             return `LINESTRING(${coordStr})`;
         } else if (coords.length > 2) {
             // Đảm bảo polygon khép kín (điểm đầu = điểm cuối)
-            const isClosed = coords[0][0] === coords[coords.length - 1][0] &&
-                coords[0][1] === coords[coords.length - 1][1];
-            if (!isClosed) {
-                coords.push(coords[0]); // khép kín polygon
+            let coordsArr = Array.from(coords);
+            const first = coordsArr[0];
+            const last = coordsArr[coordsArr.length - 1];
+            if (first[0] !== last[0] || first[1] !== last[1]) {
+                coordsArr.push([first[0], first[1]]); // khép kín polygon
             }
-            const coordStr = coords.map(([lng, lat]) => `${lng} ${lat}`).join(", ");
+            // Ensure at least 4 points for a valid polygon (3 + repeat)
+            if (coordsArr.length < 4) {
+                throw new Error("Polygon phải có ít nhất 3 điểm khác nhau");
+            }
+            const coordStr = coordsArr.map(([lng, lat]) => `${lng} ${lat}`).join(", ");
             return `POLYGON((${coordStr}))`;
         } else {
             throw new Error("Tọa độ không hợp lệ để tạo WKT");
