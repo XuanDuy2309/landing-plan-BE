@@ -162,22 +162,8 @@ export class UserModel {
     async getUserByUserName(username?: string) {
         try {
             const [rows]: any = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
-            this.id = rows[0].id
-            this.username = rows[0].username
-            this.fullname = rows[0].fullname
-            this.phone_number = rows[0].phone_number
-            this.address = rows[0].address
-            this.dob = rows[0].dob
-            this.gender = rows[0].gender
-            this.email = rows[0].email
-            this.avatar = rows[0].avatar
-            this.background = rows[0].background
-            this.role = rows[0].role
-            this.status = rows[0].status
-            this.password = rows[0].password
-            this.created_at = rows[0].created_at
             return {
-                data: this, status: true, message: "success"
+                data: rows[0], status: true, message: "success"
             };
         } catch (err) {
             return { data: null, status: false, message: err }

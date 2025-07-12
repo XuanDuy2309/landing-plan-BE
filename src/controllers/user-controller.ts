@@ -188,26 +188,25 @@ export class UserController {
         const { username, password } = req.body;
         const user = new UserModel();
         const auth = new AuthController();
-        const resUser: any = await user.getUserByUserName(username);
-        if (!resUser) {
-            return res.status(400).json({ status: false, message: 'Không tìm thấy thông tin user' });
-        }
-        bcrypt.compare(password, resUser.data?.password!, async (err, result) => {
-            if (err) {
-                return res.status(400).json({ status: false, message: err });
+        try {
+            const resUser: any = await user.getUserByUserName(username);
+            if (!resUser.status) {
+                return res.status(400).json({ status: false, message: 'Không tìm thấy thông tin user' });
             }
-            if (!result) {
+            const isMatch = await bcrypt.compare(password, resUser.data?.password!);
+            if (!isMatch) {
                 return res.status(400).json({ status: false, message: 'Mật khẩu không chính xác' });
             }
-
             const access_token = await auth.generateToken(resUser.data);
-            res.status(200).json({
+            return res.status(200).json({
                 data: {
                     ...resUser.data,
                     access_token: access_token
                 }, status: true, message: "success"
             });
-        })
+        } catch (err) {
+            return res.status(400).json({ status: false, message: err instanceof Error ? err.message : err });
+        }
     }
 
     async follow(req: any, res: any) {
