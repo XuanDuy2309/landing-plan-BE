@@ -45,6 +45,7 @@ export enum Type_Asset_Enum {
 
 export class PostModel {
     id?: number
+    status: Status_Post = Status_Post.Coming_Soon
     purpose: Purpose_Post = Purpose_Post.For_Sell
     type_asset?: Type_Asset_Enum = Type_Asset_Enum.Home
     type_landing_id?: number
@@ -89,6 +90,11 @@ export class PostModel {
         if (filters.query) {
             filterConditions.push(`p.address LIKE ?`);
             queryParams.push(`%${filters.query}%`);
+        }
+
+        if (filters.status) {
+            filterConditions.push(`p.status = ?`);
+            queryParams.push(`%${filters.status}%`);
         }
 
         if (filters.user_id) {
@@ -339,8 +345,8 @@ export class PostModel {
         // If input is a WKT string, return as is
         if (typeof coords === 'string' &&
             (/^POINT\s*\(.+\)$/i.test(coords) ||
-             /^LINESTRING\s*\(.+\)$/i.test(coords) ||
-             /^POLYGON\s*\(\(.+\)\)$/i.test(coords))) {
+                /^LINESTRING\s*\(.+\)$/i.test(coords) ||
+                /^POLYGON\s*\(\(.+\)\)$/i.test(coords))) {
             return coords;
         }
         // Validate input
@@ -638,5 +644,24 @@ export class PostModel {
             return { data: null, status: false, message: err.message || "Failed to fetch land types" };
         }
 
+    }
+
+    async getCountPost() {
+        try {
+            const [postsPurpose]: any = await pool.query('SELECT COUNT(*) as count FROM posts WHERE purpose = 3');
+            const [postsStatus]: any = await pool.query('SELECT COUNT(*) as count FROM posts WHERE status = 1');
+
+            return {
+                data: {
+                    postsPurpose: postsPurpose[0].count,
+                    postsStatus: postsStatus[0].count
+                },
+                status: true,
+                message: 'ok'
+            }
+        }
+        catch (err) {
+            return { status: false, message: err }
+        }
     }
 }

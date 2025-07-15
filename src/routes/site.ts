@@ -1,9 +1,9 @@
-import express, { Request, Response } from 'express';
-import path from 'path';
+import express from 'express';
+import { DashboardController } from '../controllers';
+import { authMiddleware } from '../middleware';
 
 export const SiteRouter = express.Router();
+const controller = new DashboardController()
 
-SiteRouter.get('/alo', (req: Request, res: Response) => {
-    res.send('Hello, world');
-});
+SiteRouter.get('/dashboard-sumary', authMiddleware, controller.getDashboardStats);
 

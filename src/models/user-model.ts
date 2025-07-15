@@ -1,4 +1,6 @@
+
 import bcrypt from "bcrypt";
+import moment from "moment";
 import pool from "../config/db";
 
 export enum Gender {
@@ -33,9 +35,19 @@ export class UserModel {
     role?: Role = Role.USER;
     status?: Status = Status.ACTIVE;
     created_at?: Date;
+    last_login: moment.Moment = moment();
 
     constructor() {
 
+    }
+
+    async updateLastLogin() {
+        try {
+            const [rows] = await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [this.id]);
+            return { status: true, message: 'success' };
+        } catch (err) {
+            return { status: false, message: err };
+        }
     }
 
     async getAll(page: number = 1, page_size: number = 10, filters: any = {}, sort: string = 'DESC') {
@@ -73,7 +85,10 @@ export class UserModel {
             }
 
             // Sắp xếp
-            const orderByClause = `ORDER BY id ${sort}`;
+            let orderByClause = `ORDER BY id ${sort}`;
+            if (filters.last_login) {
+                orderByClause = 'ORDER BY last_login DESC';
+            }
 
             // Truy vấn chính
             const query = `
@@ -177,8 +192,8 @@ export class UserModel {
             this.password = await bcrypt.hash(this.password || '', salt);
 
             const [result]: any = await pool.query(
-                'INSERT INTO users (username, password, fullname, phone_number, gender, email, avatar,background, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [this.username, this.password, this.fullname, this.phone_number, this.gender, this.email, this.avatar, this.background, this.role, this.status, this.created_at]
+                'INSERT INTO users (username, password, fullname, phone_number, gender, email,last_login, avatar,background, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [this.username, this.password, this.fullname, this.phone_number, this.gender, this.email, this.last_login, this.avatar, this.background, this.role, this.status, this.created_at]
             );
 
             const data = await this.findUserById(result.insertId);
@@ -278,5 +293,18 @@ export class UserModel {
         }
     }
 
+    async getCountUser() {
+        try {
+            const [rows]: any = await pool.query('SELECT COUNT(*) as count FROM users')
+            return {
+                data: rows[0].count,
+                status: true,
+                message: 'ok'
+            }
+        }
+        catch (err) {
+            return { status: false, message: err }
+        }
+    }
 
 }

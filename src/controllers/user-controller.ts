@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import moment from "moment";
 import { FollowModel, UserModel } from "../models";
 import { AuthController } from "./auth-controller";
 
@@ -198,9 +199,12 @@ export class UserController {
                 return res.status(400).json({ status: false, message: 'Mật khẩu không chính xác' });
             }
             const access_token = await auth.generateToken(resUser.data);
+            user.id = resUser.data.id
+            await user.updateLastLogin()
             return res.status(200).json({
                 data: {
                     ...resUser.data,
+                    last_login: moment(),
                     access_token: access_token
                 }, status: true, message: "success"
             });

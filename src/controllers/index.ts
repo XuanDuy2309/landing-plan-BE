@@ -2,6 +2,7 @@ export * from './auth-controller';
 export * from './chat-bot-controller';
 export * from './conversations-controller';
 export * from './coordinates-location-controller';
+export * from './dashboard-controller';
 export * from './district-controller';
 export * from './land-zone-controller';
 export * from './landing-plan-controller';
