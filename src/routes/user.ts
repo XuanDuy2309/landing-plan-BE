@@ -21,3 +21,4 @@ UserRouter.put('/change_background', upload.single('background'), authMiddleware
 UserRouter.delete('/delete_background', authMiddleware, userController.deleteBackground);
 UserRouter.delete('/delete_avatar', authMiddleware, userController.deleteAvatar);
 UserRouter.delete('/follow/:id', authMiddleware, userController.unfollow);
+UserRouter.put('/toggle_status', authMiddleware, userController.toggleStatus)

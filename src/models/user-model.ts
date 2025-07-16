@@ -192,8 +192,8 @@ export class UserModel {
             this.password = await bcrypt.hash(this.password || '', salt);
 
             const [result]: any = await pool.query(
-                'INSERT INTO users (username, password, fullname, phone_number, gender, email,last_login, avatar,background, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [this.username, this.password, this.fullname, this.phone_number, this.gender, this.email, this.last_login, this.avatar, this.background, this.role, this.status, this.created_at]
+                'INSERT INTO users (username, password, fullname, phone_number, gender, email,last_login, avatar,background, role, status, created_at, dob) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [this.username, this.password, this.fullname, this.phone_number, this.gender, this.email, moment(this.last_login).format("YYYY/MM/DD"), this.avatar, this.background, this.role, this.status, moment(this.created_at).format("YYYY/MM/DD"), moment(this.dob).format("YYYY/MM/DD")]
             );
 
             const data = await this.findUserById(result.insertId);
@@ -304,6 +304,26 @@ export class UserModel {
         }
         catch (err) {
             return { status: false, message: err }
+        }
+    }
+
+    async toggleStatus() {
+        try {
+            const [result] = await pool.query(
+                `UPDATE users SET status = ? WHERE id = ?`,
+                [this.status, this.id]
+            );
+            return {
+                status: true,
+                message: 'Cập nhật trạng thái thành công',
+                data: result
+            };
+        } catch (error) {
+            return {
+                status: false,
+                message: 'Lỗi khi cập nhật trạng thái',
+                error
+            };
         }
     }
 

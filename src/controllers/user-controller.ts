@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import moment from "moment";
-import { FollowModel, UserModel } from "../models";
+import { FollowModel, Status, UserModel } from "../models";
 import { AuthController } from "./auth-controller";
 
 export class UserController {
@@ -334,4 +334,44 @@ export class UserController {
             return res.status(400).json(error);
         }
     }
+
+    async toggleStatus(req: any, res: any) {
+        const { id } = req.body;
+
+        if (!id) {
+            return res.status(400).json({ status: false, message: 'Thiếu ID người dùng' });
+        }
+
+        const user = new UserModel();
+
+        try {
+            // Lấy thông tin user theo ID
+            const existingUser = await user.findUserById(id);
+
+            if (!existingUser.status || !existingUser.data) {
+                return res.status(404).json({ status: false, message: 'Không tìm thấy người dùng' });
+            }
+
+            const currentStatus = existingUser.data.status;
+            const newStatus = currentStatus === Status.ACTIVE ? Status.INACTIVE : Status.ACTIVE;
+
+            user.id = id;
+            user.status = newStatus;
+
+            const result = await user.toggleStatus(); // Hàm này bạn cần có trong model
+
+            if (!result.status) {
+                return res.status(500).json(result);
+            }
+
+            return res.status(200).json({
+                status: true,
+                message: `Đã cập nhật trạng thái người dùng thành ${newStatus === Status.ACTIVE ? "Hoạt động" : "Ngừng hoạt động"}`,
+                data: { id, status: newStatus }
+            });
+        } catch (err) {
+            return res.status(500).json({ status: false, message: err instanceof Error ? err.message : err });
+        }
+    }
+
 }
