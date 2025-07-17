@@ -88,13 +88,14 @@ export class PostModel {
         const filterConditions: string[] = [];
 
         if (filters.query) {
+            const str = filters.query.toLowerCase()
             filterConditions.push(`p.address LIKE ?`);
-            queryParams.push(`%${filters.query}%`);
+            queryParams.push(`%${str}%`);
         }
 
         if (filters.status) {
             filterConditions.push(`p.status = ?`);
-            queryParams.push(`%${filters.status}%`);
+            queryParams.push(`${filters.status}`);
         }
 
         if (filters.user_id) {
@@ -198,6 +199,11 @@ export class PostModel {
             fields.push(`direction_land`);
             values.push(`?`);
             params.push(this.direction_land);
+        }
+        if (this.status) {
+            fields.push(`status`);
+            values.push(`?`);
+            params.push(this.status);
         }
         if (this.area) {
             fields.push(`area`);
@@ -429,6 +435,7 @@ export class PostModel {
                     u.avatar AS create_by_avatar,
                     (SELECT GROUP_CONCAT(lp.create_by_id) FROM post_likes lp WHERE lp.post_id = p.id) AS like_by_ids,
                     (SELECT COUNT(*) FROM post_sharing sp WHERE sp.post_id = p.id) AS share_count,
+                    (SELECT COUNT(*) FROM timeline_auction ta WHERE ta.post_id = p.id) AS total_bids,
                     t.name AS type_landing_name,
                     t.code AS type_landing_code,
                     t.color AS type_landing_color
@@ -445,6 +452,8 @@ export class PostModel {
 
             const [rows]: any = await pool.query(query, queryParams);
             const [[totalCount]]: any = await pool.query(countQuery, queryParams.slice(0, -2));
+
+            // console.log(query,queryParams)
             return {
                 data: rows.map((row: any) => ({
                     ...row,
@@ -539,7 +548,7 @@ export class PostModel {
             params.push(this.id);
 
             const [result]: any = await pool.query(query, params);
-            return { data: result, status: true, message: "Post updated successfully" };
+            return { data: result, status: true, message: "Cập nhật bài đăng thành công" };
         } catch (err: any) {
             return { data: null, status: false, message: err.message || "Failed to update post" };
         }

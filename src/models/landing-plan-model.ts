@@ -16,6 +16,45 @@ export class LandingPlanModel {
     constructor() {
 
     }
+    async getListMap(filters: any = {}, page: number = 1, page_size: number = 10) {
+        const pageTemp = Number(page)
+        const pageSize = Number(page_size)
+        const offset = (pageTemp - 1) * pageSize;
+        try {
+            let params: any = []
+
+            if (filters.query) {
+                params = [filters.query]
+            }
+
+            params.push(pageSize, offset)
+            const [rows]: any = await pool.query(`SELECT 
+                *
+                FROM planning_maps
+                ${filters.query ? 'WHERE name like ?' : ''}
+                LIMIT ? OFFSET ?
+                `, params);
+            const countQuery = `SELECT COUNT(*) as total FROM planning_maps ${filters.query ? 'WHERE name like ?' : ''}`;
+            const [[totalCount]]: any = await pool.query(countQuery, params.slice(0, -2))
+
+            return {
+                data: rows,
+                status: true,
+                message: 'success',
+                total: totalCount.total,
+                page: pageTemp,
+                page_size: pageSize,
+            }
+
+        } catch (e: any) {
+            return {
+                data: null,
+                status: false,
+                message: e.message
+            }
+        }
+
+    }
 
     async findMapByLatLon(lat: number, lon: number) {
         const query = `

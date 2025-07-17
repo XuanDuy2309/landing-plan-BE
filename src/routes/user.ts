@@ -15,6 +15,7 @@ UserRouter.post('/follow', authMiddleware, userController.follow);
 UserRouter.post('/register', upload.single('avatar'), userController.create);
 UserRouter.post('/login', userController.login);
 UserRouter.put('/update', upload.single('avatar'), authMiddleware, userController.updateInfo);
+UserRouter.put('/update/:id', upload.single('avatar'), authMiddleware, userController.update);
 UserRouter.put('/change_password', authMiddleware, userController.changePassword);
 UserRouter.put('/change_avatar', upload.single('avatar'), authMiddleware, userController.changeAvatar);
 UserRouter.put('/change_background', upload.single('background'), authMiddleware, userController.changeBackground);

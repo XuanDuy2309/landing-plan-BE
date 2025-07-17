@@ -119,6 +119,17 @@ export class LandingPlanController {
             console.log("error", error);
         }
     }
+    async getListMap(req: any, res: any) {
+        const { page_size, page } = req.query
+        const landingPlanModel = new LandingPlanModel()
+        try {
+            const data = await landingPlanModel.getListMap({ ...req.query }, page, page_size)
+            return res.status(200).json(data);
+        } catch (err: any) {
+            return res.status(400).json({ message: err.message || 'Failed to fetch posts' });
+        }
+    }
+
 }
 
 // function long2tileX(lon: number, zoom: number): number {

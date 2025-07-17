@@ -106,6 +106,27 @@ export class UserController {
         res.status(200).json(data);
     }
 
+    async update(req: any, res: any) {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ status: false, message: 'Thiếu id' });
+        }
+        const { fullname, phone_number, address, dob, gender, email, avatar, role, status } = req.body;
+        const userTemp = new UserModel();
+        userTemp.id = id;
+        userTemp.fullname = fullname;
+        userTemp.phone_number = phone_number;
+        userTemp.address = address;
+        userTemp.dob = dob;
+        userTemp.gender = gender;
+        userTemp.email = email;
+        userTemp.avatar = avatar;
+        userTemp.role = role;
+        userTemp.status = status;
+        const data = await userTemp.updateInfo();
+        res.status(200).json(data);
+    }
+
     async changePassword(req: any, res: any) {
         const { user } = req;
         if (!user) {
@@ -197,6 +218,13 @@ export class UserController {
             const isMatch = await bcrypt.compare(password, resUser.data?.password!);
             if (!isMatch) {
                 return res.status(400).json({ status: false, message: 'Mật khẩu không chính xác' });
+            }
+            if (resUser.data.status === Status.INACTIVE) {
+                return res.status(400).json({
+                    data: null,
+                    status: false,
+                    message: "Tài khoản đã bị khoá"
+                })
             }
             const access_token = await auth.generateToken(resUser.data);
             user.id = resUser.data.id

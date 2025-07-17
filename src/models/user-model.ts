@@ -75,6 +75,12 @@ export class UserModel {
                 whereClause += ' AND role = ?';
                 queryParams.push(filters.role);
             }
+            if (filters.status) {
+                whereClause += ' AND status = ?'
+                queryParams.push(filters.status)
+            }
+
+            console.log(whereClause, queryParams)
 
             if (filters.excludeIds) {
                 const excludeIds = Array.isArray(filters.excludeIds) ? filters.excludeIds : filters.excludeIds.split(',').map((id: any) => Number(id));
@@ -192,7 +198,7 @@ export class UserModel {
             this.password = await bcrypt.hash(this.password || '', salt);
 
             const [result]: any = await pool.query(
-                'INSERT INTO users (username, password, fullname, phone_number, gender, email,last_login, avatar,background, role, status, created_at, dob) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO users (username, password, fullname, phone_number, gender, email,last_login, avatar,background, role, status, created_at, dob) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)',
                 [this.username, this.password, this.fullname, this.phone_number, this.gender, this.email, moment(this.last_login).format("YYYY/MM/DD"), this.avatar, this.background, this.role, this.status, moment(this.created_at).format("YYYY/MM/DD"), moment(this.dob).format("YYYY/MM/DD")]
             );
 
@@ -209,7 +215,7 @@ export class UserModel {
 
     async updateInfo() {
         try {
-            const [rows] = await pool.query('UPDATE users SET fullname = ?, phone_number = ?, address = ?,dob=?, gender = ?, email = ?, role = ?, status = ? WHERE id = ?',
+            const [rows] = await pool.query('UPDATE users SET fullname = ?, phone_number = ?, address = ?, dob=?, gender = ?, email = ?, role = ?, status = ? WHERE id = ?',
                 [this.fullname, this.phone_number, this.address, this.dob, this.gender, this.email, this.role, this.status, this.id]);
             return {
                 data: {
