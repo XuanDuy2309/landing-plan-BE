@@ -166,15 +166,11 @@ export class UserModel {
             if (rows.length > 0) {
                 return { status: true, message: "Username đã được sử dụng" }
             }
-            // [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [this.email]);
-            // if (rows.length > 0) {
-            //     return { status: true, message: "Email đã được sử dụng" }
-            // }
             [rows] = await pool.query('SELECT * FROM users WHERE phone_number = ?', [this.phone_number]);
             if (rows.length > 0) {
                 return { status: true, message: "Số điện thoại đã được sử dụng" }
             }
-            return { status: false, message: "success" }
+            return { data: null, status: false, message: "Người dùng không tồn tại" }
         } catch (err) {
             return { status: false, message: err }
         }

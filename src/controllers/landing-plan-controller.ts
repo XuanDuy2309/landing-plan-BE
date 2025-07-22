@@ -1,6 +1,6 @@
 import axios from "axios";
 import sharp from "sharp";
-import { LandingPlanModel, PostModel } from "../models";
+import { LandingPlanModel, LandTypeChangeModel, LandTypeModel, PostModel, Role, UserModel } from "../models";
 
 export class LandingPlanController {
     async findMapByLatLon(req: any, res: any) {
@@ -14,6 +14,34 @@ export class LandingPlanController {
 
         try {
             const landingPlanModel = new LandingPlanModel();
+            if (radiusFloat > 0) {
+                const result = await landingPlanModel.listMapInRange(latFloat, lonFloat, radiusFloat);
+                if (!result.status) {
+                    return res.status(400).json(result);
+                }
+                res.status(200).json(result);
+            } else {
+                const result = await landingPlanModel.findMapByLatLon(latFloat, lonFloat);
+                if (!result.status) {
+                    return res.status(400).json(result);
+                }
+                res.status(200).json(result);
+            }
+        } catch (error) {
+            res.status(500).json({ message: "Error fetching map(s)", error });
+        }
+    }
+    async findMapChangeByLatLon(req: any, res: any) {
+        const { lat, lon, radius } = req.query;
+        const latFloat = parseFloat(lat as string);
+        const lonFloat = parseFloat(lon as string);
+        const radiusFloat = radius !== undefined ? parseFloat(radius as string) : 0;
+        if (isNaN(latFloat) || isNaN(lonFloat)) {
+            return res.status(400).json({ message: "Lat,lon không được để trống" });
+        }
+
+        try {
+            const landingPlanModel = new LandTypeChangeModel();
             if (radiusFloat > 0) {
                 const result = await landingPlanModel.listMapInRange(latFloat, lonFloat, radiusFloat);
                 if (!result.status) {
@@ -130,16 +158,374 @@ export class LandingPlanController {
         }
     }
 
+
+    async getListLandType(req: any, res: any) {
+        const { page_size, page } = req.query
+        const landingPlanModel = new LandTypeModel()
+        try {
+            const data = await landingPlanModel.getListLandType({ ...req.query }, page, page_size)
+            return res.status(200).json(data);
+        } catch (err: any) {
+            return res.status(400).json({ message: err.message || 'Failed to fetch posts' });
+        }
+    }
+
+    async addLandType(req: any, res: any) {
+        const { user } = req;
+        const landTypeChangeModel = new LandTypeModel();
+        const userModel = new UserModel();
+        try {
+            Object.assign(landTypeChangeModel, req.body)
+            if (!user) {
+                return res.status(401).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Vui lòng đăng nhập"
+                    }
+                )
+            }
+            const userInfo = await userModel.findUserById(user.id)
+            if (!userInfo.status) {
+                return res.status(400).json(userInfo);
+            }
+            if (userInfo.data.role !== Role.ADMIN) {
+                return res.status(403).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Bạn không có quyền thay đổi loại đất, vui lòng liên hệ quản trị viên"
+                    }
+                )
+            }
+            if (!landTypeChangeModel.name) {
+                return res.status(400).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Tên loại đất không được để trống"
+                    }
+                )
+            }
+            if (!landTypeChangeModel.code) {
+                return res.status(400).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Mã loại đất không được để trống"
+                    }
+                )
+            }
+            if (!landTypeChangeModel.color) {
+                return res.status(400).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Màu loại đất không được để trống"
+                    }
+                )
+            }
+            const data = await landTypeChangeModel.addLandType();
+            if (!data.status) {
+                return res.status(400).json(data);
+            }
+            return res.status(200).json(data);
+        }
+        catch (error: any) {
+            return res.status(500).json({
+                data: null,
+                status: false,
+                message: error.message || 'Internal server error'
+            });
+        }
+    }
+
+    async updateLandType(req: any, res: any) {
+        const { user } = req;
+        const { id } = req.params
+        const landTypeChangeModel = new LandTypeModel();
+        const userModel = new UserModel();
+        try {
+            Object.assign(landTypeChangeModel, req.body)
+            if (!user) {
+                return res.status(401).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Vui lòng đăng nhập"
+                    }
+                )
+            }
+            if (!id) {
+                return ({
+                    data: null,
+                    status: false,
+                    message: "Id không được để trống"
+                })
+            }
+            const userInfo = await userModel.findUserById(user.id)
+            if (!userInfo.status) {
+                return res.status(400).json(userInfo);
+            }
+            if (userInfo.data.role !== Role.ADMIN) {
+                return res.status(403).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Bạn không có quyền thay đổi loại đất, vui lòng liên hệ quản trị viên"
+                    }
+                )
+            }
+            landTypeChangeModel.id = id
+            const data = await landTypeChangeModel.updateLandType();
+            if (!data.status) {
+                return res.status(400).json(data);
+            }
+            return res.status(200).json(data);
+        }
+        catch (error: any) {
+            return res.status(500).json({
+                data: null,
+                status: false,
+                message: error.message || 'Internal server error'
+            });
+        }
+    }
+
+    async deleteLandType(req: any, res: any) {
+        const { user } = req;
+        const { id } = req.params
+        const landTypeChangeModel = new LandTypeModel();
+        const userModel = new UserModel();
+        try {
+            Object.assign(landTypeChangeModel, req.body)
+            if (!user) {
+                return res.status(401).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Vui lòng đăng nhập"
+                    }
+                )
+            }
+            if (!id) {
+                return ({
+                    data: null,
+                    status: false,
+                    message: "Id không được để trống"
+                })
+            }
+            const userInfo = await userModel.findUserById(user.id)
+            if (!userInfo.status) {
+                return res.status(400).json(userInfo);
+            }
+            if (userInfo.data.role !== Role.ADMIN) {
+                return res.status(403).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Bạn không có quyền thực hiện thao tác này, vui lòng liên hệ với quản trị viên"
+                    }
+                )
+            }
+            const data = await landTypeChangeModel.deleteLandType(id);
+            if (!data.status) {
+                return res.status(400).json(data);
+            }
+            return res.status(200).json(data);
+        }
+        catch (error: any) {
+            return res.status(500).json({
+                data: null,
+                status: false,
+                message: error.message || 'Internal server error'
+            });
+        }
+    }
+
+    async getListMapChange(req: any, res: any) {
+        const { page_size, page } = req.query
+        const landingPlanModel = new LandTypeChangeModel()
+        try {
+            const data = await landingPlanModel.getListMap({ ...req.query }, page, page_size)
+            return res.status(200).json(data);
+        } catch (err: any) {
+            return res.status(400).json({ message: err.message || 'Failed to fetch posts' });
+        }
+    }
+
+    async storeLandTypeChange(req: any, res: any) {
+        const { user } = req;
+        const landTypeChangeModel = new LandTypeChangeModel();
+        const userModel = new UserModel();
+        try {
+            Object.assign(landTypeChangeModel, req.body)
+            if (!user) {
+                return res.status(401).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Vui lòng đăng nhập"
+                    }
+                )
+            }
+            landTypeChangeModel.user_id = user.id
+            const userInfo = await userModel.findUserById(user.id)
+            if (!userInfo.status) {
+                return res.status(400).json(userInfo);
+            }
+            if (userInfo.data.role !== Role.ADMIN) {
+                return res.status(403).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Bạn không có quyền thay đổi loại đất, vui lòng liên hệ quản trị viên"
+                    }
+                )
+            }
+            landTypeChangeModel.user_id = user.id
+            if (!landTypeChangeModel.land_type_id) {
+                return res.status(400).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Vui lòng chọn loại đất"
+                    }
+                )
+            }
+            const data = await landTypeChangeModel.add();
+            if (!data.status) {
+                return res.status(400).json(data);
+            }
+            return res.status(200).json(data);
+        }
+        catch (error: any) {
+            return res.status(500).json({
+                data: null,
+                status: false,
+                message: error.message || 'Internal server error'
+            });
+        }
+    }
+
+    async updateLandTypeChange(req: any, res: any) {
+        const { user } = req;
+        const { id } = req.params
+        const landTypeChangeModel = new LandTypeChangeModel();
+        const userModel = new UserModel();
+        try {
+            Object.assign(landTypeChangeModel, req.body)
+            if (!user) {
+                return res.status(401).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Vui lòng đăng nhập"
+                    }
+                )
+            }
+            if (!id) {
+                return ({
+                    data: null,
+                    status: false,
+                    message: "Id không được để trống"
+                })
+            }
+            landTypeChangeModel.user_id = user.id
+            const userInfo = await userModel.findUserById(user.id)
+            if (!userInfo.status) {
+                return res.status(400).json(userInfo);
+            }
+            if (userInfo.data.role !== Role.ADMIN) {
+                return res.status(403).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Bạn không có quyền thay đổi loại đất, vui lòng liên hệ quản trị viên"
+                    }
+                )
+            }
+            landTypeChangeModel.user_id = user.id
+            landTypeChangeModel.id = id
+            if (!landTypeChangeModel.land_type_id) {
+                return res.status(400).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Vui lòng chọn loại đất"
+                    }
+                )
+            }
+            const data = await landTypeChangeModel.update();
+            if (!data.status) {
+                return res.status(400).json(data);
+            }
+            return res.status(200).json(data);
+        }
+        catch (error: any) {
+            return res.status(500).json({
+                data: null,
+                status: false,
+                message: error.message || 'Internal server error'
+            });
+        }
+    }
+
+    async deleteLandTypeChange(req: any, res: any) {
+        const { user } = req;
+        const { id } = req.params
+        const landTypeChangeModel = new LandTypeChangeModel();
+        const userModel = new UserModel();
+        try {
+            Object.assign(landTypeChangeModel, req.body)
+            if (!user) {
+                return res.status(401).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Vui lòng đăng nhập"
+                    }
+                )
+            }
+            if (!id) {
+                return ({
+                    data: null,
+                    status: false,
+                    message: "Id không được để trống"
+                })
+            }
+            landTypeChangeModel.user_id = user.id
+            const userInfo = await userModel.findUserById(user.id)
+            if (!userInfo.status) {
+                return res.status(400).json(userInfo);
+            }
+            if (userInfo.data.role !== Role.ADMIN) {
+                return res.status(403).json(
+                    {
+                        data: null,
+                        status: false,
+                        message: "Bạn không có quyền thực hiện thao tác này, vui lòng liên hệ với quản trị viên"
+                    }
+                )
+            }
+            landTypeChangeModel.id = id
+            const data = await landTypeChangeModel.delete();
+            if (!data.status) {
+                return res.status(400).json(data);
+            }
+            return res.status(200).json(data);
+        }
+        catch (error: any) {
+            return res.status(500).json({
+                data: null,
+                status: false,
+                message: error.message || 'Internal server error'
+            });
+        }
+    }
+
+
 }
-
-// function long2tileX(lon: number, zoom: number): number {
-//     return Math.floor(((lon + 180) / 360) * Math.pow(2, zoom));
-// }
-
-// function lat2tileY(lat: number, zoom: number): number {
-//     return Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) +
-//         1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
-// }
 
 function getColorDistance(color1: string, color2: string): number {
     // Convert hex to RGB
